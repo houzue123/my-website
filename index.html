@@ -1,0 +1,767 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+   <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>毎日のメモ</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+
+    <!-- ☰ メニュー用CSS -->
+    <style>
+        /* =========================
+           ヘッダー
+        ========================= */
+
+        header {
+            position: relative;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .header-content > div {
+            text-align: center;
+        }
+
+        /* メニューボタン */
+
+        .menu-button {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+
+            width: 48px;
+            height: 48px;
+
+            padding: 0;
+
+            background: transparent;
+            color: var(--on-theme-color);
+
+            border: 2px solid var(--on-theme-color);
+            border-radius: 10px;
+
+            font-size: 26px;
+            cursor: pointer;
+        }
+
+        .menu-button:hover {
+            opacity: 0.8;
+        }
+
+
+        /* =========================
+           設定メニュー
+        ========================= */
+
+        .menu-panel {
+            display: none;
+
+            position: absolute;
+
+            top: 100%;
+            right: 20px;
+
+            width: 280px;
+
+            padding: 20px;
+
+            background: var(--card-bg);
+            color: var(--text);
+
+            border-radius: 12px;
+
+            box-shadow: 0 5px 20px var(--shadow);
+
+            z-index: 1000;
+
+            text-align: left;
+
+            box-sizing: border-box;
+        }
+
+        .menu-panel.open {
+            display: block;
+        }
+
+        .menu-panel h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        .menu-panel h4 {
+            margin: 15px 0 10px;
+        }
+
+
+        /* テーマカラー */
+
+        .theme-swatches {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .theme-swatch {
+            width: 34px;
+            height: 34px;
+
+            padding: 0;
+
+            border-radius: 50%;
+
+            border: 2px solid var(--card-bg);
+
+            box-shadow:
+                0 0 0 1px var(--border);
+
+            cursor: pointer;
+        }
+
+        .theme-swatch:hover {
+            transform: scale(1.1);
+        }
+
+        .theme-swatch.selected {
+            box-shadow:
+                0 0 0 2px var(--theme-color-text);
+        }
+
+
+        /* 自由に色を選ぶ */
+
+        .theme-custom {
+            display: flex;
+
+            align-items: center;
+
+            gap: 8px;
+
+            margin-top: 15px;
+
+            color: var(--text-muted);
+        }
+
+        .theme-custom input[type="color"] {
+            width: 42px;
+            height: 32px;
+
+            padding: 2px;
+
+            border: 1px solid var(--input-border);
+            border-radius: 8px;
+
+            background: none;
+
+            cursor: pointer;
+        }
+
+
+        /* ダークモード */
+
+        .darkmode-setting {
+            display: flex;
+
+            justify-content: space-between;
+            align-items: center;
+
+            margin-top: 20px;
+            padding-top: 15px;
+
+            border-top: 1px solid var(--border);
+        }
+
+
+        /* スマホ */
+
+        @media (max-width: 600px) {
+
+            .menu-button {
+                right: 10px;
+
+                width: 42px;
+                height: 42px;
+
+                font-size: 22px;
+            }
+
+            .menu-panel {
+                right: 10px;
+
+                width: calc(100% - 20px);
+                max-width: 300px;
+            }
+
+            .header-content {
+                padding-right: 45px;
+            }
+        }
+    </style>
+</head>
+
+
+<body>
+
+<!-- 最初に表示するタイトル画面 -->
+<div id="titleScreen">
+    <div class="title-logo">
+        <div class="title-icon">📝</div>
+        <h1>毎日メモ</h1>
+        <p>毎日使いたくなるメモ帳</p>
+    </div>
+</div>
+
+
+
+<!-- =========================
+     ヘッダー
+========================= -->
+
+<header>
+
+    <div class="header-content">
+
+        <div>
+             <img src="タイトルロゴ.png" alt="ロゴ"class="section-image">
+
+        </div>
+
+        <!-- ☰ メニューボタン -->
+        <button
+            id="menuButton"
+            class="menu-button"
+            type="button"
+            aria-label="設定メニュー"
+            aria-expanded="false">
+
+            ☰
+
+        </button>
+
+    </div>
+
+
+    <!-- =========================
+         設定メニュー
+    ========================= -->
+
+    <div
+        id="menuPanel"
+        class="menu-panel">
+
+        <h3>⚙️ 設定</h3>
+
+
+        <!-- テーマカラー -->
+
+        <h4>🎨 テーマカラー</h4>
+
+        <div
+            class="theme-swatches"
+            id="themeSwatches">
+
+            <button
+                class="theme-swatch"
+                data-color="#4a90e2"
+                style="background:#4a90e2"
+                title="ブルー"
+                aria-label="ブルー">
+            </button>
+
+            <button
+                class="theme-swatch"
+                data-color="#2ecc71"
+                style="background:#2ecc71"
+                title="グリーン"
+                aria-label="グリーン">
+            </button>
+
+            <button
+                class="theme-swatch"
+                data-color="#e74c3c"
+                style="background:#e74c3c"
+                title="レッド"
+                aria-label="レッド">
+            </button>
+
+            <button
+                class="theme-swatch"
+                data-color="#f39c12"
+                style="background:#f39c12"
+                title="オレンジ"
+                aria-label="オレンジ">
+            </button>
+
+            <button
+                class="theme-swatch"
+                data-color="#9b59b6"
+                style="background:#9b59b6"
+                title="パープル"
+                aria-label="パープル">
+            </button>
+
+            <button
+                class="theme-swatch"
+                data-color="#e91e8c"
+                style="background:#e91e8c"
+                title="ピンク"
+                aria-label="ピンク">
+            </button>
+
+        </div>
+
+
+        <!-- 好きな色 -->
+
+        <label class="theme-custom">
+
+            好きな色を選ぶ：
+
+            <input
+                type="color"
+                id="themeColorPicker"
+                value="#4a90e2">
+
+        </label>
+
+
+        <!-- ミッション管理 -->
+
+        <div class="menu-section">
+
+            <button
+                id="openMissionManager"
+                class="menu-wide-button"
+                type="button">
+
+                📋 ミッション一覧を確認
+
+            </button>
+
+        </div>
+
+
+        <!-- ダークモード -->
+
+        <div class="darkmode-setting">
+
+            <span>🌙 ダークモード</span>
+
+            <label class="switch">
+
+                <input
+                    type="checkbox"
+                    id="darkModeToggle">
+
+                <span class="slider"></span>
+
+            </label>
+
+        </div>
+
+    </div>
+
+</header>
+
+
+
+<!-- =========================
+     メイン
+========================= -->
+
+<main>
+
+
+    <!-- =========================
+         連続ログイン
+    ========================= -->
+
+    <section class="streak">
+
+        <h2>🔥 連続記録</h2>
+
+        <p>
+            <span id="streak">0</span>日連続！
+        </p>
+
+        <p
+            class="streak-message"
+            id="streakMessage">
+        </p>
+
+
+        <div class="title-block">
+
+            <h3>🔥 連続ログイン称号</h3>
+
+            <p
+                class="current-title"
+                id="streakTitle">
+            </p>
+
+            <p class="total-points">
+
+                <span id="streakDays">0</span>
+                日連続
+
+            </p>
+
+
+            <div class="title-progress-bar">
+
+                <div
+                    class="title-progress-fill"
+                    id="streakProgressFill">
+                </div>
+
+            </div>
+
+            <p
+                class="title-next"
+                id="streakNext">
+            </p>
+
+        </div>
+        
+         <div class="title-block">
+
+            <h3>💎 ポイント称号</h3>
+
+            <p
+                class="current-title"
+                id="currentTitle">
+            </p>
+
+            <p class="total-points">
+
+                <span id="totalPoints">0</span>
+                pt
+
+            </p>
+
+
+            <div class="title-progress-bar">
+
+                <div
+                    class="title-progress-fill"
+                    id="titleProgressFill">
+                </div>
+
+            </div>
+
+
+            <p
+                class="title-next"
+                id="titleNext">
+            </p>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =========================
+         デイリーミッション
+    ========================= -->
+
+    <section class="mission">
+
+        <h2>🎯 今日のミッション</h2>
+
+        <div id="missionList"></div>
+
+
+        <p class="mission-progress">
+
+            達成：
+
+            <span id="missionCount">0</span>
+            /
+            <span id="missionTotal">3</span>
+
+        </p>
+
+
+        <p id="missionBonus"></p>
+
+  <!-- =========================
+         自分でミッションを追加
+    ========================= -->
+
+
+        <h2>➕ 自分のミッションを追加</h2>
+
+
+        <div class="custom-mission-form">
+
+            <input
+                type="text"
+                id="customMissionInput"
+                placeholder="ミッション内容を入力">
+
+
+            <button id="addCustomMission">
+
+                追加する
+
+            </button>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =========================
+         メモ
+    ========================= -->
+
+    <section class="memo">
+
+        <h2>📝 メモ</h2>
+
+
+        <textarea
+            id="memoInput"
+            placeholder="ここにメモを書いてください">
+        </textarea>
+
+
+        <button id="saveButton">
+
+            メモを保存
+
+        </button>
+
+
+        <div id="memoList"></div>
+
+    </section>
+
+
+
+    <!-- =========================
+         カレンダー
+    ========================= -->
+
+    <section class="calendar-section">
+
+        <h2>📅 カレンダー</h2>
+
+
+        <div class="calendar-header">
+
+            <button id="prevMonth">
+                ←
+            </button>
+
+            <h3 id="monthTitle"></h3>
+
+            <button id="nextMonth">
+                →
+            </button>
+
+        </div>
+
+
+        <div class="calendar-week">
+
+            <div>日</div>
+            <div>月</div>
+            <div>火</div>
+            <div>水</div>
+            <div>木</div>
+            <div>金</div>
+            <div>土</div>
+
+        </div>
+
+
+        <div
+            id="calendar"
+            class="calendar">
+        </div>
+
+
+        <!-- 予定入力 -->
+
+        <div class="event-form">
+
+            <h3>📌 予定を追加</h3>
+
+
+            <input
+                type="date"
+                id="eventDate">
+
+
+            <input
+                type="text"
+                id="eventText"
+                placeholder="予定を入力">
+
+
+            <button id="addEvent">
+
+                予定を追加
+
+            </button>
+
+        </div>
+
+
+        <!-- 近い予定 -->
+
+        <div class="upcoming">
+
+            <h3>⏰ 近い予定</h3>
+
+            <div id="upcomingEvents"></div>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+
+<!-- =========================
+     JavaScript
+========================= -->
+
+<!-- 今日のミッションを選ぶ画面 -->
+<div id="missionPickerOverlay" class="mission-picker-overlay" hidden>
+    <div class="mission-picker-modal">
+        <h2>🎯 今日のミッションを選ぼう</h2>
+        <p>やりたいミッションにチェックを入れてください（最大3つ）</p>
+
+        <p id="missionPickerCount" class="mission-picker-count">選択中：0 / 3</p>
+
+        <div id="missionPickerList" class="mission-picker-list"></div>
+
+        <p id="missionPickerWarning" class="mission-picker-warning" hidden>
+            1つ以上選んでください
+        </p>
+
+        <div class="mission-picker-actions">
+            <button id="missionPickerConfirm">これで決定</button>
+            <button id="missionPickerRandom" class="secondary-button">おまかせで決める</button>
+        </div>
+    </div>
+</div>
+
+<!-- 設定したミッションの確認・削除画面 -->
+<div id="missionManagerOverlay" class="mission-picker-overlay" hidden>
+    <div class="mission-picker-modal">
+        <h2>📋 ミッション一覧</h2>
+        <p>ミッションの確認と削除ができます</p>
+
+        <div id="missionManagerList" class="mission-picker-list"></div>
+
+        <div class="mission-picker-actions">
+            <button id="missionManagerClose" class="secondary-button">閉じる</button>
+        </div>
+    </div>
+</div>
+
+<!-- カレンダーの日付から予定を設定する画面 -->
+<div id="dayModalOverlay" class="mission-picker-overlay" hidden>
+    <div class="mission-picker-modal">
+        <h2 id="dayModalTitle">📅 予定</h2>
+
+        <div id="dayModalList" class="mission-picker-list"></div>
+
+        <input
+            type="text"
+            id="dayModalInput"
+            class="day-modal-input"
+            placeholder="予定を入力">
+
+        <div class="mission-picker-actions">
+            <button id="dayModalAdd">予定を追加</button>
+            <button id="dayModalClose" class="secondary-button">閉じる</button>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+
+
+<!-- ☰ メニューの開閉 -->
+<script>
+
+    const menuButton =
+        document.getElementById("menuButton");
+
+    const menuPanel =
+        document.getElementById("menuPanel");
+
+
+    menuButton.addEventListener(
+        "click",
+        function () {
+
+            const isOpen =
+                menuPanel.classList.toggle("open");
+
+            menuButton.setAttribute(
+                "aria-expanded",
+                isOpen
+            );
+
+        }
+    );
+
+
+    /*
+        メニューの外側をクリックしたら閉じる
+    */
+
+    document.addEventListener(
+        "click",
+        function (event) {
+
+            if (
+                !menuPanel.contains(event.target) &&
+                !menuButton.contains(event.target)
+            ) {
+
+                menuPanel.classList.remove("open");
+
+                menuButton.setAttribute(
+                    "aria-expanded",
+                    "false"
+                );
+
+            }
+
+        }
+    );
+
+</script>
+
+<script> // 1.5秒後にタイトル画面を消す 
+			setTimeout(function ()
+			 { const titleScreen = document.getElementById("titleScreen");
+			  titleScreen.classList.add("hide"); }, 1500);
+ </script>
+</body>
+</html>
