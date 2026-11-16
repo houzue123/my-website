@@ -30,6 +30,29 @@ function parseDateString(dateString) {
 }
 
 
+const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
+
+
+// 日時を「2026/11/16（月）11:46」の形にする
+function formatDateTime(isoString) {
+
+    const date =
+        new Date(isoString);
+
+    const hours =
+        String(date.getHours()).padStart(2, "0");
+
+    const minutes =
+        String(date.getMinutes()).padStart(2, "0");
+
+    return (
+        `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}` +
+        `（${WEEKDAYS[date.getDay()]}）${hours}:${minutes}`
+    );
+
+}
+
+
 // 2つの日付が何日離れているか
 function daysBetween(fromString, toString) {
 
@@ -427,6 +450,73 @@ function saveDailyMissions() {
         JSON.stringify(dailyMissions)
     );
 
+    saveMissionHistory();
+
+}
+
+
+// ====================
+// ミッションの達成履歴
+// 形：{ "2026-11-16": { missions: [{ icon, name, reward, completed }], bonus: true }, ... }
+// ====================
+
+// 履歴を残す日数（古いものから消す）
+const HISTORY_KEEP_DAYS = 365;
+
+let missionHistory =
+    JSON.parse(localStorage.getItem("missionHistory")) || {};
+
+
+// 今日のミッションの状態を履歴に書き込む
+function saveMissionHistory() {
+
+    if (dailyMissions.length === 0) {
+
+        delete missionHistory[today];
+
+    } else {
+
+        missionHistory[today] = {
+
+            missions: dailyMissions.map(
+                m => ({
+                    icon: m.icon,
+                    name: m.name,
+                    reward: m.reward,
+                    completed: !!m.completed
+                })
+            ),
+
+            bonus: localStorage.getItem("bonusAwardedDate") === today
+
+        };
+
+    }
+
+
+    // 古い履歴を消す
+    Object.keys(missionHistory).forEach(
+        date => {
+            if (daysBetween(date, today) > HISTORY_KEEP_DAYS) {
+                delete missionHistory[date];
+            }
+        }
+    );
+
+
+    localStorage.setItem(
+        "missionHistory",
+        JSON.stringify(missionHistory)
+    );
+
+}
+
+
+// この機能を入れる前から今日のミッションがあった場合も、履歴に残す
+if (!needsMissionSelection) {
+
+    saveMissionHistory();
+
 }
 
 
@@ -659,6 +749,8 @@ function updateMissionBonus(completedCount) {
         addPoints(20);
 
         localStorage.setItem("bonusAwardedDate", today);
+
+        saveMissionHistory();
 
         showToast("🎉 全ミッション達成！ ボーナス +20pt");
 
@@ -1077,8 +1169,27 @@ const memoList =
     document.getElementById("memoList");
 
 
+function generateMemoId() {
+
+    return (
+        "memo-" +
+        Date.now().toString(36) +
+        Math.random().toString(36).slice(2, 8)
+    );
+
+}
+
+
+// メモ：{ id, text, createdAt, updatedAt }
+// 前のバージョンは文字列だけで保存していたので、その場合は形を変換する
+// （作成日時は分からないので null）
 let memos =
-    JSON.parse(localStorage.getItem("memos")) || [];
+    (JSON.parse(localStorage.getItem("memos")) || []).map(
+        memo =>
+            typeof memo === "string"
+                ? { id: generateMemoId(), text: memo, createdAt: null, updatedAt: null }
+                : memo
+    );
 
 
 function saveMemos() {
@@ -1112,9 +1223,36 @@ function displayMemos() {
                 document.createElement("p");
 
             text.textContent =
-                memo;
+                memo.text;
 
             div.appendChild(text);
+
+
+            // 作成日時・編集日時
+            const dateParts = [];
+
+            if (memo.createdAt) {
+                dateParts.push(`🕒 ${formatDateTime(memo.createdAt)}`);
+            }
+
+            if (memo.updatedAt) {
+                dateParts.push(`✏️ ${formatDateTime(memo.updatedAt)} 編集`);
+            }
+
+            if (dateParts.length > 0) {
+
+                const dateEl =
+                    document.createElement("div");
+
+                dateEl.className =
+                    "memo-date";
+
+                dateEl.textContent =
+                    dateParts.join("　");
+
+                div.appendChild(dateEl);
+
+            }
 
 
             // ボタン
@@ -1140,7 +1278,7 @@ function displayMemos() {
                 function() {
 
                     const newMemo =
-                        prompt("メモを変更してください", memos[index]);
+                        prompt("メモを変更してください", memos[index].text);
 
 
                     if (newMemo === null) {
@@ -1157,8 +1295,16 @@ function displayMemos() {
                     }
 
 
-                    memos[index] =
+                    // 内容が変わっていなければ何もしない
+                    if (newMemo.trim() === memos[index].text) {
+                        return;
+                    }
+
+                    memos[index].text =
                         newMemo.trim();
+
+                    memos[index].updatedAt =
+                        new Date().toISOString();
 
                     saveMemos();
 
@@ -1216,6 +1362,9 @@ function displayMemos() {
 }
 
 
+// 変換した形で保存し直しておく
+saveMemos();
+
 displayMemos();
 
 
@@ -1237,7 +1386,14 @@ saveButton.addEventListener(
         }
 
 
-        memos.push(memo);
+        memos.push({
+
+            id: generateMemoId(),
+            text: memo,
+            createdAt: new Date().toISOString(),
+            updatedAt: null
+
+        });
 
         saveMemos();
 
@@ -2689,6 +2845,248 @@ dayModalOverlay.addEventListener(
         if (e.target === dayModalOverlay) {
 
             dayModalOverlay.hidden =
+                true;
+
+        }
+
+    }
+);
+
+
+// ====================
+// ミッションの達成履歴を見る画面
+// ====================
+
+const missionHistoryOverlay =
+    document.getElementById("missionHistoryOverlay");
+
+const missionHistorySummary =
+    document.getElementById("missionHistorySummary");
+
+const missionHistoryList =
+    document.getElementById("missionHistoryList");
+
+
+// 「11月16日（月）」の形にする
+function formatHistoryDate(dateString) {
+
+    const date =
+        parseDateString(dateString);
+
+    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日（${WEEKDAYS[date.getDay()]}）`;
+
+}
+
+
+function createSummaryItem(label, value) {
+
+    const item =
+        document.createElement("div");
+
+    item.className =
+        "history-summary-item";
+
+    const valueEl =
+        document.createElement("div");
+
+    valueEl.className =
+        "history-summary-value";
+
+    valueEl.textContent =
+        value;
+
+    const labelEl =
+        document.createElement("div");
+
+    labelEl.className =
+        "history-summary-label";
+
+    labelEl.textContent =
+        label;
+
+    item.appendChild(valueEl);
+    item.appendChild(labelEl);
+
+    return item;
+
+}
+
+
+function renderMissionHistory() {
+
+    missionHistorySummary.innerHTML = "";
+    missionHistoryList.innerHTML = "";
+
+
+    // 新しい日付から順に
+    const dates =
+        Object.keys(missionHistory)
+            .sort()
+            .reverse();
+
+
+    // まとめ
+    let perfectDays = 0;
+    let completedTotal = 0;
+
+    dates.forEach(
+        date => {
+
+            const day =
+                missionHistory[date];
+
+            const done =
+                day.missions.filter(m => m.completed).length;
+
+            completedTotal += done;
+
+            if (done === day.missions.length) {
+                perfectDays++;
+            }
+
+        }
+    );
+
+    missionHistorySummary.appendChild(createSummaryItem("記録した日", `${dates.length}日`));
+    missionHistorySummary.appendChild(createSummaryItem("全達成した日", `${perfectDays}日`));
+    missionHistorySummary.appendChild(createSummaryItem("達成した数", `${completedTotal}個`));
+
+
+    if (dates.length === 0) {
+
+        missionHistoryList.appendChild(
+            createManagerEmpty("まだ履歴はありません。今日のミッションから始めよう！")
+        );
+
+        return;
+
+    }
+
+
+    // 1日ずつのカード
+    dates.forEach(
+        date => {
+
+            const day =
+                missionHistory[date];
+
+            const done =
+                day.missions.filter(m => m.completed).length;
+
+            const isPerfect =
+                done === day.missions.length;
+
+
+            const card =
+                document.createElement("div");
+
+            card.className =
+                "history-day";
+
+            if (isPerfect) {
+                card.classList.add("perfect");
+            }
+
+
+            // 見出し：日付と達成数
+            const header =
+                document.createElement("div");
+
+            header.className =
+                "history-day-header";
+
+            const dateEl =
+                document.createElement("span");
+
+            dateEl.className =
+                "history-date";
+
+            dateEl.textContent =
+                date === today
+                    ? `${formatHistoryDate(date)} 今日`
+                    : formatHistoryDate(date);
+
+            const countEl =
+                document.createElement("span");
+
+            countEl.className =
+                "history-count";
+
+            countEl.textContent =
+                isPerfect
+                    ? `🎉 ${done}/${day.missions.length}${day.bonus ? " +20pt" : ""}`
+                    : `${done}/${day.missions.length}`;
+
+            header.appendChild(dateEl);
+            header.appendChild(countEl);
+
+            card.appendChild(header);
+
+
+            // その日のミッション
+            day.missions.forEach(
+                mission => {
+
+                    const row =
+                        document.createElement("div");
+
+                    row.className =
+                        "history-mission";
+
+                    if (!mission.completed) {
+                        row.classList.add("not-done");
+                    }
+
+                    row.textContent =
+                        `${mission.completed ? "✅" : "⬜"} ${mission.icon} ${mission.name}`;
+
+                    card.appendChild(row);
+
+                }
+            );
+
+
+            missionHistoryList.appendChild(card);
+
+        }
+    );
+
+}
+
+
+document.getElementById("openMissionHistory").addEventListener(
+    "click",
+    function() {
+
+        // 設定メニューは閉じてから画面を開く
+        document.getElementById("menuPanel").classList.remove("open");
+
+        document.getElementById("menuButton").setAttribute("aria-expanded", "false");
+
+
+        renderMissionHistory();
+
+        missionHistoryOverlay.hidden =
+            false;
+
+    }
+);
+
+
+document.getElementById("missionHistoryClose").addEventListener(
+    "click",
+    () => { missionHistoryOverlay.hidden = true; }
+);
+
+
+// 暗い部分をクリックしても閉じる
+missionHistoryOverlay.addEventListener(
+    "click",
+    function(e) {
+
+        if (e.target === missionHistoryOverlay) {
+
+            missionHistoryOverlay.hidden =
                 true;
 
         }

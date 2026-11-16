@@ -147,6 +147,15 @@
 
             </button>
 
+            <button
+                id="openMissionHistory"
+                class="menu-wide-button menu-button-gap"
+                type="button">
+
+                📊 ミッションの達成履歴
+
+            </button>
+
         </div>
 
 
@@ -480,6 +489,21 @@
 
         <div class="mission-picker-actions">
             <button id="missionManagerClose" class="secondary-button">閉じる</button>
+        </div>
+    </div>
+</div>
+
+<!-- ミッションの達成履歴を見る画面 -->
+<div id="missionHistoryOverlay" class="mission-picker-overlay" hidden>
+    <div class="mission-picker-modal">
+        <h2>📊 ミッションの達成履歴</h2>
+
+        <div id="missionHistorySummary" class="history-summary"></div>
+
+        <div id="missionHistoryList" class="mission-picker-list"></div>
+
+        <div class="mission-picker-actions">
+            <button id="missionHistoryClose" class="secondary-button">閉じる</button>
         </div>
     </div>
 </div>
