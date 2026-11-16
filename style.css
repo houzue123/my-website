@@ -1095,8 +1095,11 @@ textarea {
 }
 
 .title-icon {
-    font-size: 70px;
-    margin-bottom: 10px;
+    display: block;
+    width: 320px;
+    max-width: 80vw;
+    height: auto;
+    margin: 0 auto 10px;
 }
 
 .title-logo h1 {
@@ -1202,7 +1205,7 @@ textarea {
     }
 
     .title-icon {
-        font-size: 55px;
+        width: 240px;
     }
 
     .title-logo h1 {
