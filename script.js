@@ -2,8 +2,73 @@
 // 共通
 // ====================
 
+// 日付を YYYY-MM-DD にする（端末の時刻＝日本時間で計算）
+function getDateString(date) {
+
+    const year =
+        date.getFullYear();
+
+    const month =
+        String(date.getMonth() + 1).padStart(2, "0");
+
+    const day =
+        String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+
+}
+
+
+// "YYYY-MM-DD" を、その日の0時（端末の時刻）の Date にする
+function parseDateString(dateString) {
+
+    const [y, m, d] =
+        dateString.split("-").map(Number);
+
+    return new Date(y, m - 1, d);
+
+}
+
+
+// 2つの日付が何日離れているか
+function daysBetween(fromString, toString) {
+
+    return Math.round(
+        (parseDateString(toString) - parseDateString(fromString)) /
+        (1000 * 60 * 60 * 24)
+    );
+
+}
+
+
+// 今日の日付
+// ※ toISOString() は世界標準時なので、日本だと朝9時まで前日になってしまう
 const today =
-    new Date().toISOString().split("T")[0];
+    getDateString(new Date());
+
+
+// 画面下に少しだけお知らせを出す
+const toast =
+    document.getElementById("toast");
+
+let toastTimer = null;
+
+function showToast(message) {
+
+    toast.textContent =
+        message;
+
+    toast.classList.add("show");
+
+    clearTimeout(toastTimer);
+
+    toastTimer =
+        setTimeout(
+            () => toast.classList.remove("show"),
+            2500
+        );
+
+}
 
 
 // ====================
@@ -27,18 +92,7 @@ if (lastLogin === null) {
 // 前回ログインが昨日か確認
 else if (lastLogin !== today) {
 
-    const lastDate =
-        new Date(lastLogin);
-
-    const todayDate =
-        new Date(today);
-
-    const difference =
-        (todayDate - lastDate)
-        / (1000 * 60 * 60 * 24);
-
-
-    if (difference === 1) {
+    if (daysBetween(lastLogin, today) === 1) {
 
         streak++;
 
@@ -47,23 +101,23 @@ else if (lastLogin !== today) {
         streak = 1;
 
     }
+
+}
+
+// 同じ日だけど、何かの理由で0になっていた場合
+else if (streak < 1) {
+
+    streak = 1;
+
 }
 
 
-localStorage.setItem(
-    "lastLogin",
-    today
-);
-
-localStorage.setItem(
-    "streak",
-    streak
-);
+localStorage.setItem("lastLogin", today);
+localStorage.setItem("streak", streak);
 
 
-document.getElementById(
-    "streak"
-).textContent = streak;
+document.getElementById("streak").textContent =
+    streak;
 
 
 // ====================
@@ -72,13 +126,13 @@ document.getElementById(
 
 const streakMessages = [
 
-	{ min: 0,  message: "🌱 千里の道も一歩から。今日という一日を、大切に始めよう。" },
-	{ min: 2,  message: "🌿 継続は力なり。小さな積み重ねが、未来の自分をつくる。" },
-	{ min: 3,  message: "☀️ 三日坊主を越えた先に、新しい自分が待っている。" },
-	{ min: 7,  message: "🌸 日進月歩。一週間前の自分より、少しずつ前へ。" },
-	{ min: 14, message: "🍀 塵も積もれば山となる。何気ない日々が、大きな力に変わる。" },
-	{ min: 30, message: "🌷 有言実行。続けてきた日々が、あなたの自信になる。" },
-	{ min: 60, message: "✨ 不撓不屈。歩みを止めなかった日々は、決して無駄にはならない。" }
+    { min: 0,  message: "🌱 千里の道も一歩から。今日という一日を、大切に始めよう。" },
+    { min: 2,  message: "🌿 継続は力なり。小さな積み重ねが、未来の自分をつくる。" },
+    { min: 3,  message: "☀️ 三日坊主を越えた先に、新しい自分が待っている。" },
+    { min: 7,  message: "🌸 日進月歩。一週間前の自分より、少しずつ前へ。" },
+    { min: 14, message: "🍀 塵も積もれば山となる。何気ない日々が、大きな力に変わる。" },
+    { min: 30, message: "🌷 有言実行。続けてきた日々が、あなたの自信になる。" },
+    { min: 60, message: "✨ 不撓不屈。歩みを止めなかった日々は、決して無駄にはならない。" }
 
 ];
 
@@ -88,35 +142,79 @@ function updateStreakMessage() {
     let current =
         streakMessages[0];
 
-
-    for (
-        let i = 0;
-        i < streakMessages.length;
-        i++
-    ) {
-
-        if (
-            streak >=
-            streakMessages[i].min
-        ) {
-
-            current =
-                streakMessages[i];
-
+    streakMessages.forEach(
+        item => {
+            if (streak >= item.min) {
+                current = item;
+            }
         }
+    );
 
-    }
-
-
-    document.getElementById(
-        "streakMessage"
-    ).textContent =
+    document.getElementById("streakMessage").textContent =
         current.message;
 
 }
 
 
 updateStreakMessage();
+
+
+// ====================
+// 称号の共通処理
+// ====================
+
+// list: [{ min, name }]、value: 今の値、unit: "日" や "pt"
+function updateTitleArea(list, value, unit, titleEl, fillEl, nextEl) {
+
+    // 条件を満たす最後の称号と、その次の称号を探す
+    let current =
+        list[0];
+
+    let next =
+        null;
+
+    list.forEach(
+        (item, i) => {
+            if (value >= item.min) {
+                current = item;
+                next = list[i + 1] || null;
+            }
+        }
+    );
+
+
+    titleEl.textContent =
+        current.name;
+
+
+    if (next) {
+
+        const range =
+            next.min - current.min;
+
+        const progress =
+            value - current.min;
+
+        const percent =
+            Math.min(100, Math.round((progress / range) * 100));
+
+        fillEl.style.width =
+            `${percent}%`;
+
+        nextEl.textContent =
+            `次の称号「${next.name}」まであと ${next.min - value}${unit}`;
+
+    } else {
+
+        fillEl.style.width =
+            "100%";
+
+        nextEl.textContent =
+            "最高称号に到達しました！";
+
+    }
+
+}
 
 
 // ====================
@@ -135,99 +233,19 @@ const streakTitles = [
 ];
 
 
-const streakTitleEl =
-    document.getElementById(
-        "streakTitle"
-    );
-
-const streakDaysEl =
-    document.getElementById(
-        "streakDays"
-    );
-
-const streakProgressFill =
-    document.getElementById(
-        "streakProgressFill"
-    );
-
-const streakNextEl =
-    document.getElementById(
-        "streakNext"
-    );
-
-
 function updateStreakTitleDisplay() {
 
-    streakDaysEl.textContent =
+    document.getElementById("streakDays").textContent =
         streak;
 
-
-    // 現在の称号（条件を満たす最後のものを探す）
-    let current =
-        streakTitles[0];
-
-    let next =
-        null;
-
-
-    for (
-        let i = 0;
-        i < streakTitles.length;
-        i++
-    ) {
-
-        if (
-            streak >=
-            streakTitles[i].min
-        ) {
-
-            current =
-                streakTitles[i];
-
-            next =
-                streakTitles[i + 1] ||
-                null;
-
-        }
-
-    }
-
-
-    streakTitleEl.textContent =
-        current.name;
-
-
-    if (next) {
-
-        const range =
-            next.min - current.min;
-
-        const progress =
-            streak - current.min;
-
-        const percent =
-            Math.min(
-                100,
-                Math.round(
-                    (progress / range) * 100
-                )
-            );
-
-        streakProgressFill.style.width =
-            `${percent}%`;
-
-        streakNextEl.textContent =
-            `次の称号「${next.name}」まであと ${next.min - streak}日`;
-
-    } else {
-
-        streakProgressFill.style.width =
-            "100%";
-
-        streakNextEl.textContent =
-            "最高称号に到達しました！";
-
-    }
+    updateTitleArea(
+        streakTitles,
+        streak,
+        "日",
+        document.getElementById("streakTitle"),
+        document.getElementById("streakProgressFill"),
+        document.getElementById("streakNext")
+    );
 
 }
 
@@ -236,62 +254,95 @@ updateStreakTitleDisplay();
 
 
 // ====================
+// ポイント称号
+// ====================
+
+const titles = [
+
+    { min: 0,   name: "🌱 記録のはじまり" },
+    { min: 50,  name: "📝 記録の習慣" },
+    { min: 150, name: "🌿 記録の積み重ね" },
+    { min: 300, name: "🌸 記録の匠" },
+    { min: 500, name: "✨ 思い出の宝箱" }
+
+];
+
+
+const currentTitleEl =
+    document.getElementById("currentTitle");
+
+const totalPointsEl =
+    document.getElementById("totalPoints");
+
+const titleProgressFill =
+    document.getElementById("titleProgressFill");
+
+const titleNextEl =
+    document.getElementById("titleNext");
+
+
+let totalPoints =
+    Number(localStorage.getItem("totalPoints")) || 0;
+
+
+// ポイントを加算して表示を更新
+function addPoints(amount) {
+
+    totalPoints += amount;
+
+    localStorage.setItem("totalPoints", totalPoints);
+
+    updateTitleDisplay();
+
+}
+
+
+// 称号表示を更新
+function updateTitleDisplay() {
+
+    totalPointsEl.textContent =
+        totalPoints;
+
+    updateTitleArea(
+        titles,
+        totalPoints,
+        "pt",
+        currentTitleEl,
+        titleProgressFill,
+        titleNextEl
+    );
+
+}
+
+
+updateTitleDisplay();
+
+
+// ====================
 // デイリーミッション
 // ====================
 
+// 最初から入っているミッション
+// → アプリが操作を見て「自動で達成」になる（hint は達成のしかた）
 const defaultMissions = [
 
-    {
-        id: "add",
-        icon: "📝",
-        name: "メモを1個追加する",
-        reward: 10
-    },
+    { id: "add",      icon: "📝", name: "メモを1個追加する",   reward: 10, hint: "メモを保存すると達成" },
+    { id: "view",     icon: "👀", name: "メモを確認する",       reward: 10, hint: "メモ一覧を見ると達成" },
+    { id: "event",    icon: "📅", name: "予定を1個確認する",   reward: 10, hint: "予定のある日付をタップすると達成" },
+    { id: "edit",     icon: "✏️", name: "メモを1個編集する",   reward: 10, hint: "メモを編集すると達成" },
+    { id: "delete",   icon: "🗑️", name: "メモを1個削除する",   reward: 10, hint: "メモを削除すると達成" },
+    { id: "calendar", icon: "📆", name: "カレンダーを確認する", reward: 10, hint: "月を切り替えるか日付をタップすると達成" }
 
-    {
-        id: "view",
-        icon: "👀",
-        name: "メモを確認する",
-        reward: 10
-    },
-
-    {
-        id: "event",
-        icon: "📅",
-        name: "予定を1個確認する",
-        reward: 10
-    },
-
-    {
-        id: "edit",
-        icon: "✏️",
-        name: "メモを1個編集する",
-        reward: 10
-    },
-
-    {
-        id: "delete",
-        icon: "🗑️",
-        name: "メモを1個削除する",
-        reward: 10
-    },
-
-    {
-        id: "calendar",
-        icon: "📆",
-        name: "カレンダーを確認する",
-        reward: 10
-    }
 ];
+
+
+// 1日に選べるミッションの上限
+const MAX_DAILY_MISSIONS = 3;
 
 
 // 削除した「最初から入っているミッション」のID
 let deletedDefaultMissionIds =
-    JSON.parse(
-        localStorage.getItem(
-            "deletedDefaultMissionIds"
-        )
-    ) || [];
+    JSON.parse(localStorage.getItem("deletedDefaultMissionIds")) || [];
 
 function saveDeletedDefaultMissionIds() {
 
@@ -302,6 +353,7 @@ function saveDeletedDefaultMissionIds() {
 
 }
 
+
 // 実際に使う組み込みミッション（削除したものは除く）
 let missions =
     defaultMissions.filter(
@@ -310,13 +362,9 @@ let missions =
 
 
 // ユーザーが自分で追加したミッション
+// → アプリには分からない行動なので「手動でチェック」
 let customMissions =
-    JSON.parse(
-        localStorage.getItem(
-            "customMissions"
-        )
-    ) || [];
-
+    JSON.parse(localStorage.getItem("customMissions")) || [];
 
 function saveCustomMissions() {
 
@@ -340,44 +388,30 @@ function generateMissionId() {
 
 
 const missionList =
-    document.getElementById(
-        "missionList"
-    );
+    document.getElementById("missionList");
 
 const missionCount =
-    document.getElementById(
-        "missionCount"
-    );
+    document.getElementById("missionCount");
 
 const missionTotal =
-    document.getElementById(
-        "missionTotal"
-    );
+    document.getElementById("missionTotal");
 
 const missionBonus =
-    document.getElementById(
-        "missionBonus"
-    );
+    document.getElementById("missionBonus");
 
 
-// 保存されているミッション
+// 保存されている今日のミッション
 let dailyMissions =
-    JSON.parse(
-        localStorage.getItem(
-            "dailyMissions"
-        )
-    );
+    JSON.parse(localStorage.getItem("dailyMissions"));
 
 const savedMissionDate =
-    localStorage.getItem(
-        "dailyMissionDate"
-    );
+    localStorage.getItem("dailyMissionDate");
 
 
 // 日付が変わった（または初回）場合は、自分で選ぶまでミッション無し
 const needsMissionSelection =
     savedMissionDate !== today ||
-    !dailyMissions;
+    !Array.isArray(dailyMissions);
 
 if (needsMissionSelection) {
 
@@ -386,7 +420,18 @@ if (needsMissionSelection) {
 }
 
 
+function saveDailyMissions() {
+
+    localStorage.setItem(
+        "dailyMissions",
+        JSON.stringify(dailyMissions)
+    );
+
+}
+
+
 // ミッション表示
+// ※ 入力された文字は textContent で入れる（HTMLとして解釈されないように）
 function displayMissions() {
 
     missionList.innerHTML = "";
@@ -403,104 +448,147 @@ function displayMissions() {
             div.className =
                 "mission-item";
 
-
             if (mission.completed) {
 
-                div.classList.add(
-                    "completed"
-                );
+                div.classList.add("completed");
 
                 completedCount++;
 
             }
 
 
-            div.innerHTML = `
+            // 左側：アイコン・名前・ポイント
+            const info =
+                document.createElement("div");
 
-                <div class="mission-info">
+            info.className =
+                "mission-info";
 
-                    <span class="mission-icon">
-                        ${mission.icon}
-                    </span>
+            const icon =
+                document.createElement("span");
 
-                    <div>
+            icon.className =
+                "mission-icon";
 
-                        <div class="mission-name">
-                            ${mission.name}
-                        </div>
+            icon.textContent =
+                mission.icon;
 
-                        <div class="mission-reward">
-                            +${mission.reward}pt
-                        </div>
+            const textBox =
+                document.createElement("div");
 
-                    </div>
+            const name =
+                document.createElement("div");
 
-                </div>
+            name.className =
+                "mission-name";
 
-                <div class="mission-actions">
+            name.textContent =
+                mission.name;
 
-                    <button
-                        class="mission-button"
-                        ${mission.completed
-                            ? "disabled"
-                            : ""}>
+            const reward =
+                document.createElement("div");
 
-                        ${
-                            mission.completed
-                            ? "✅ 完了"
-                            : "達成する"
-                        }
+            reward.className =
+                "mission-reward";
 
-                    </button>
+            // 最初からのミッションは、達成のしかたも出す
+            const original =
+                defaultMissions.find(m => m.id === mission.id);
 
-                    ${
-                        mission.custom
-                        ? '<button class="mission-delete-button" title="このミッションを削除">🗑️</button>'
-                        : ""
-                    }
+            reward.textContent =
+                !mission.custom && !mission.completed && original
+                    ? `+${mission.reward}pt ・ ${original.hint}`
+                    : `+${mission.reward}pt`;
 
-                </div>
+            textBox.appendChild(name);
+            textBox.appendChild(reward);
 
-            `;
+            info.appendChild(icon);
+            info.appendChild(textBox);
 
 
-            const button =
-                div.querySelector(
-                    ".mission-button"
+            // 右側：状態とボタン
+            const actions =
+                document.createElement("div");
+
+            actions.className =
+                "mission-actions";
+
+
+            if (mission.completed) {
+
+                const done =
+                    document.createElement("span");
+
+                done.className =
+                    "mission-done";
+
+                done.textContent =
+                    "✅ 完了";
+
+                actions.appendChild(done);
+
+            } else if (mission.custom) {
+
+                // 自分で追加したミッションだけ、手動で達成ボタン
+                const button =
+                    document.createElement("button");
+
+                button.className =
+                    "mission-button";
+
+                button.textContent =
+                    "達成する";
+
+                button.addEventListener(
+                    "click",
+                    () => completeMission(index)
                 );
 
+                actions.appendChild(button);
 
-            button.addEventListener(
-                "click",
-                function() {
+            } else {
 
-                    completeMission(index);
+                const auto =
+                    document.createElement("span");
 
-                }
-            );
+                auto.className =
+                    "mission-auto";
+
+                auto.textContent =
+                    "⏳ 自動で達成";
+
+                actions.appendChild(auto);
+
+            }
 
 
             if (mission.custom) {
 
                 const deleteButton =
-                    div.querySelector(
-                        ".mission-delete-button"
-                    );
+                    document.createElement("button");
+
+                deleteButton.className =
+                    "mission-delete-button";
+
+                deleteButton.title =
+                    "このミッションを削除";
+
+                deleteButton.textContent =
+                    "🗑️";
 
                 deleteButton.addEventListener(
                     "click",
-                    function() {
-
-                        deleteCustomMission(
-                            mission.id,
-                            index
-                        );
-
-                    }
+                    () => deleteCustomMission(mission.id, index)
                 );
+
+                actions.appendChild(deleteButton);
 
             }
 
+
+            div.appendChild(info);
+            div.appendChild(actions);
 
             missionList.appendChild(div);
 
@@ -515,36 +603,108 @@ function displayMissions() {
         dailyMissions.length;
 
 
-    if (
-        dailyMissions.length > 0 &&
-        completedCount === dailyMissions.length
-    ) {
+    updateMissionBonus(completedCount);
+
+}
+
+
+// 全達成ボーナス
+function updateMissionBonus(completedCount) {
+
+    const total =
+        dailyMissions.length;
+
+
+    if (total === 0) {
 
         missionBonus.textContent =
-            "🎉 全ミッション達成！ ボーナス +20pt";
+            "今日のミッションはありません";
+
+        return;
+
+    }
 
 
-        // ボーナスは1日1回だけ加算
-        const bonusAwardedDate =
-            localStorage.getItem(
-                "bonusAwardedDate"
-            );
-
-        if (bonusAwardedDate !== today) {
-
-            addPoints(20);
-
-            localStorage.setItem(
-                "bonusAwardedDate",
-                today
-            );
-
-        }
-
-    } else {
+    if (completedCount < total) {
 
         missionBonus.textContent =
-            `あと ${dailyMissions.length - completedCount} 個！`;
+            `あと ${total - completedCount} 個！`;
+
+        return;
+
+    }
+
+
+    // 選んだ時の数より少ない＝未達成のミッションを削除して「全達成」にした場合
+    const target =
+        Number(localStorage.getItem("dailyMissionTarget")) || total;
+
+    if (completedCount < target) {
+
+        missionBonus.textContent =
+            "✅ 全部終わりました（途中でミッションを減らしたので、今日のボーナスはお休み）";
+
+        return;
+
+    }
+
+
+    missionBonus.textContent =
+        "🎉 全ミッション達成！ ボーナス +20pt";
+
+
+    // ボーナスは1日1回だけ加算
+    if (localStorage.getItem("bonusAwardedDate") !== today) {
+
+        addPoints(20);
+
+        localStorage.setItem("bonusAwardedDate", today);
+
+        showToast("🎉 全ミッション達成！ ボーナス +20pt");
+
+    }
+
+}
+
+
+// ミッション達成（手動・自動どちらもここを通る）
+function completeMission(index) {
+
+    const mission =
+        dailyMissions[index];
+
+    // すでに達成済みなら何もしない（ポイントの二重加算を防ぐ）
+    if (!mission || mission.completed) {
+        return;
+    }
+
+
+    mission.completed =
+        true;
+
+    saveDailyMissions();
+
+    addPoints(mission.reward);
+
+    showToast(`🎯 「${mission.name}」達成！ +${mission.reward}pt`);
+
+    displayMissions();
+
+}
+
+
+// IDを指定して達成（操作に合わせて自動で呼ぶ用）
+// 今日のミッションに入っていない、または達成済みなら何もしない
+function completeMissionById(missionId) {
+
+    const index =
+        dailyMissions.findIndex(
+            m => m.id === missionId && !m.completed
+        );
+
+    if (index !== -1) {
+
+        completeMission(index);
 
     }
 
@@ -554,25 +714,14 @@ function displayMissions() {
 // カスタムミッションを削除（今日のリストと保存済みミッション一覧の両方から）
 function deleteCustomMission(missionId, index) {
 
-    const result =
-        confirm(
-            "このミッションを削除しますか？"
-        );
-
-    if (!result) {
+    if (!confirm("このミッションを削除しますか？")) {
         return;
     }
 
 
-    dailyMissions.splice(
-        index,
-        1
-    );
+    dailyMissions.splice(index, 1);
 
-    localStorage.setItem(
-        "dailyMissions",
-        JSON.stringify(dailyMissions)
-    );
+    saveDailyMissions();
 
 
     customMissions =
@@ -588,170 +737,6 @@ function deleteCustomMission(missionId, index) {
 }
 
 
-// ミッション達成
-function completeMission(index) {
-
-    dailyMissions[index].completed =
-        true;
-
-
-    localStorage.setItem(
-        "dailyMissions",
-        JSON.stringify(
-            dailyMissions
-        )
-    );
-
-
-    addPoints(
-        dailyMissions[index].reward
-    );
-
-
-    displayMissions();
-
-}
-
-
-// ====================
-// 称号
-// ====================
-
-const titles = [
-
-    { min: 0,   name: "🌱 記録のはじまり" },
-    { min: 50,  name: "📝 記録の習慣" },
-    { min: 150, name: "🌿 記録の積み重ね" },
-    { min: 300, name: "🌸 記録の匠" },
-    { min: 500, name: "✨ 思い出の宝箱" }
-
-];
-
-
-const currentTitleEl =
-    document.getElementById(
-        "currentTitle"
-    );
-
-const totalPointsEl =
-    document.getElementById(
-        "totalPoints"
-    );
-
-const titleProgressFill =
-    document.getElementById(
-        "titleProgressFill"
-    );
-
-const titleNextEl =
-    document.getElementById(
-        "titleNext"
-    );
-
-
-let totalPoints =
-    Number(
-        localStorage.getItem(
-            "totalPoints"
-        )
-    ) || 0;
-
-
-// ポイントを加算して表示を更新
-function addPoints(amount) {
-
-    totalPoints += amount;
-
-    localStorage.setItem(
-        "totalPoints",
-        totalPoints
-    );
-
-    updateTitleDisplay();
-
-}
-
-
-// 称号表示を更新
-function updateTitleDisplay() {
-
-    totalPointsEl.textContent =
-        totalPoints;
-
-
-    // 現在の称号（条件を満たす最後のものを探す）
-    let current =
-        titles[0];
-
-    let next =
-        null;
-
-
-    for (
-        let i = 0;
-        i < titles.length;
-        i++
-    ) {
-
-        if (
-            totalPoints >=
-            titles[i].min
-        ) {
-
-            current =
-                titles[i];
-
-            next =
-                titles[i + 1] ||
-                null;
-
-        }
-
-    }
-
-
-    currentTitleEl.textContent =
-        current.name;
-
-
-    if (next) {
-
-        const range =
-            next.min - current.min;
-
-        const progress =
-            totalPoints - current.min;
-
-        const percent =
-            Math.min(
-                100,
-                Math.round(
-                    (progress / range) * 100
-                )
-            );
-
-        titleProgressFill.style.width =
-            `${percent}%`;
-
-        titleNextEl.textContent =
-            `次の称号「${next.name}」まであと ${next.min - totalPoints}pt`;
-
-    } else {
-
-        titleProgressFill.style.width =
-            "100%";
-
-        titleNextEl.textContent =
-            "最高称号に到達しました！";
-
-    }
-
-}
-
-
-updateTitleDisplay();
-
-
 displayMissions();
 
 
@@ -760,38 +745,30 @@ displayMissions();
 // ====================
 
 const missionPickerOverlay =
-    document.getElementById(
-        "missionPickerOverlay"
-    );
+    document.getElementById("missionPickerOverlay");
 
 const missionPickerList =
-    document.getElementById(
-        "missionPickerList"
-    );
+    document.getElementById("missionPickerList");
 
 const missionPickerWarning =
-    document.getElementById(
-        "missionPickerWarning"
-    );
+    document.getElementById("missionPickerWarning");
 
 const missionPickerConfirm =
-    document.getElementById(
-        "missionPickerConfirm"
-    );
+    document.getElementById("missionPickerConfirm");
 
 const missionPickerRandom =
-    document.getElementById(
-        "missionPickerRandom"
-    );
-
-
-// 1日に選べるミッションの上限
-const MAX_DAILY_MISSIONS = 3;
+    document.getElementById("missionPickerRandom");
 
 const missionPickerCount =
-    document.getElementById(
-        "missionPickerCount"
-    );
+    document.getElementById("missionPickerCount");
+
+
+// 選べるミッションの候補
+function getMissionCandidates() {
+
+    return [...missions, ...customMissions];
+
+}
 
 
 // 選択数を数えて、上限に達したら残りを選べなくする
@@ -835,39 +812,76 @@ function buildMissionPicker() {
     missionPickerList.innerHTML = "";
 
 
-    const candidates =
-        [...missions, ...customMissions];
-
-
-    candidates.forEach(
+    getMissionCandidates().forEach(
         (mission, index) => {
 
             const label =
-                document.createElement(
-                    "label"
-                );
+                document.createElement("label");
 
             label.className =
                 "mission-picker-item";
 
-            label.innerHTML = `
-                <input type="checkbox" value="${index}">
-                <span class="picker-icon">${mission.icon}</span>
-                <span class="picker-name">${mission.name}</span>
-                <span class="picker-reward">+${mission.reward}pt</span>
-            `;
 
-            label.querySelector("input").addEventListener(
+            const input =
+                document.createElement("input");
+
+            input.type =
+                "checkbox";
+
+            input.value =
+                index;
+
+            input.addEventListener(
                 "change",
                 updateMissionPickerLimit
             );
 
-            missionPickerList.appendChild(
-                label
-            );
+
+            const icon =
+                document.createElement("span");
+
+            icon.className =
+                "picker-icon";
+
+            icon.textContent =
+                mission.icon;
+
+
+            const name =
+                document.createElement("span");
+
+            name.className =
+                "picker-name";
+
+            name.textContent =
+                mission.custom
+                    ? `${mission.name}（手動）`
+                    : mission.name;
+
+
+            const reward =
+                document.createElement("span");
+
+            reward.className =
+                "picker-reward";
+
+            reward.textContent =
+                `+${mission.reward}pt`;
+
+
+            label.appendChild(input);
+            label.appendChild(icon);
+            label.appendChild(name);
+            label.appendChild(reward);
+
+            missionPickerList.appendChild(label);
 
         }
     );
+
+
+    missionPickerWarning.hidden =
+        true;
 
     updateMissionPickerLimit();
 
@@ -879,26 +893,23 @@ function confirmMissionSelection(selectedMissions) {
 
     dailyMissions =
         selectedMissions.map(
-            mission => {
-
-                return {
-                    ...mission,
-                    completed: false
-                };
-
-            }
+            mission => ({
+                id: mission.id,
+                icon: mission.icon,
+                name: mission.name,
+                reward: mission.reward,
+                custom: !!mission.custom,
+                completed: false
+            })
         );
 
 
-    localStorage.setItem(
-        "dailyMissions",
-        JSON.stringify(dailyMissions)
-    );
+    saveDailyMissions();
 
-    localStorage.setItem(
-        "dailyMissionDate",
-        today
-    );
+    localStorage.setItem("dailyMissionDate", today);
+
+    // ボーナス判定用に、選んだ数を覚えておく
+    localStorage.setItem("dailyMissionTarget", dailyMissions.length);
 
 
     missionPickerOverlay.hidden =
@@ -907,24 +918,34 @@ function confirmMissionSelection(selectedMissions) {
 
     displayMissions();
 
+
+    // 「メモを確認する」を選んだ時点でメモ一覧が見えていれば達成
+    if (dailyMissions.length > 0) {
+
+        checkMemoViewMission();
+
+    }
+
 }
 
 
-if (needsMissionSelection) {
+// ちゃんと偏りなく混ぜる（フィッシャー–イェーツのシャッフル）
+function shuffle(array) {
 
-    if ([...missions, ...customMissions].length === 0) {
+    const result =
+        [...array];
 
-        // 選べるミッションが無い日は、ミッション無しで始める
-        confirmMissionSelection([]);
+    for (let i = result.length - 1; i > 0; i--) {
 
-    } else {
+        const j =
+            Math.floor(Math.random() * (i + 1));
 
-        buildMissionPicker();
-
-        missionPickerOverlay.hidden =
-            false;
+        [result[i], result[j]] =
+            [result[j], result[i]];
 
     }
+
+    return result;
 
 }
 
@@ -934,12 +955,10 @@ missionPickerConfirm.addEventListener(
     function() {
 
         const candidates =
-            [...missions, ...customMissions];
+            getMissionCandidates();
 
         const checked =
-            missionPickerList.querySelectorAll(
-                "input:checked"
-            );
+            missionPickerList.querySelectorAll("input:checked");
 
 
         if (checked.length === 0) {
@@ -948,26 +967,17 @@ missionPickerConfirm.addEventListener(
                 false;
 
             return;
+
         }
-
-
-        missionPickerWarning.hidden =
-            true;
 
 
         const selected =
             Array.from(checked)
                 .slice(0, MAX_DAILY_MISSIONS)
-                .map(
-                    input => candidates[
-                        Number(input.value)
-                    ]
-                );
+                .map(input => candidates[Number(input.value)]);
 
 
-        confirmMissionSelection(
-            selected
-        );
+        confirmMissionSelection(selected);
 
     }
 );
@@ -977,14 +987,9 @@ missionPickerRandom.addEventListener(
     "click",
     function() {
 
-        const shuffled =
-            [...missions, ...customMissions].sort(
-                () => Math.random() - 0.5
-            );
-
-
         confirmMissionSelection(
-            shuffled.slice(0, 3)
+            shuffle(getMissionCandidates())
+                .slice(0, MAX_DAILY_MISSIONS)
         );
 
     }
@@ -996,14 +1001,10 @@ missionPickerRandom.addEventListener(
 // ====================
 
 const customMissionInput =
-    document.getElementById(
-        "customMissionInput"
-    );
+    document.getElementById("customMissionInput");
 
 const addCustomMissionButton =
-    document.getElementById(
-        "addCustomMission"
-    );
+    document.getElementById("addCustomMission");
 
 
 addCustomMissionButton.addEventListener(
@@ -1016,15 +1017,15 @@ addCustomMissionButton.addEventListener(
 
         if (text === "") {
 
-            alert(
-                "ミッションの内容を入力してください！"
-            );
+            alert("ミッションの内容を入力してください！");
 
             return;
+
         }
 
 
-        const newMission = {
+        // 保存済みミッション一覧に追加（明日以降の候補になる）
+        customMissions.push({
 
             id: generateMissionId(),
             icon: "📌",
@@ -1032,13 +1033,7 @@ addCustomMissionButton.addEventListener(
             reward: 10,
             custom: true
 
-        };
-
-
-        // 保存済みミッション一覧に追加（明日以降の抽選対象になる）
-        customMissions.push(
-            newMission
-        );
+        });
 
         saveCustomMissions();
 
@@ -1047,9 +1042,7 @@ addCustomMissionButton.addEventListener(
             "";
 
 
-        alert(
-            "ミッションを追加しました！明日以降のミッションに登場します。"
-        );
+        showToast("📌 ミッションを追加しました！明日以降の候補に出てきます");
 
     }
 );
@@ -1059,7 +1052,8 @@ customMissionInput.addEventListener(
     "keydown",
     function(e) {
 
-        if (e.key === "Enter") {
+        // 日本語入力の変換確定の Enter では追加しない
+        if (e.key === "Enter" && !e.isComposing) {
 
             addCustomMissionButton.click();
 
@@ -1074,25 +1068,27 @@ customMissionInput.addEventListener(
 // ====================
 
 const memoInput =
-    document.getElementById(
-        "memoInput"
-    );
+    document.getElementById("memoInput");
 
 const saveButton =
-    document.getElementById(
-        "saveButton"
-    );
+    document.getElementById("saveButton");
 
 const memoList =
-    document.getElementById(
-        "memoList"
-    );
+    document.getElementById("memoList");
 
 
 let memos =
-    JSON.parse(
-        localStorage.getItem("memos")
-    ) || [];
+    JSON.parse(localStorage.getItem("memos")) || [];
+
+
+function saveMemos() {
+
+    localStorage.setItem(
+        "memos",
+        JSON.stringify(memos)
+    );
+
+}
 
 
 // メモ表示
@@ -1105,9 +1101,7 @@ function displayMemos() {
         function(memo, index) {
 
             const div =
-                document.createElement(
-                    "div"
-                );
+                document.createElement("div");
 
             div.className =
                 "memo-item";
@@ -1115,22 +1109,17 @@ function displayMemos() {
 
             // 本文
             const text =
-                document.createElement(
-                    "p"
-                );
+                document.createElement("p");
 
             text.textContent =
                 memo;
-
 
             div.appendChild(text);
 
 
             // ボタン
             const buttons =
-                document.createElement(
-                    "div"
-                );
+                document.createElement("div");
 
             buttons.className =
                 "memo-buttons";
@@ -1138,9 +1127,7 @@ function displayMemos() {
 
             // 編集
             const editButton =
-                document.createElement(
-                    "button"
-                );
+                document.createElement("button");
 
             editButton.textContent =
                 "✏️ 編集";
@@ -1148,48 +1135,37 @@ function displayMemos() {
             editButton.className =
                 "edit-button";
 
-
             editButton.addEventListener(
                 "click",
                 function() {
 
                     const newMemo =
-                        prompt(
-                            "メモを変更してください",
-                            memos[index]
-                        );
+                        prompt("メモを変更してください", memos[index]);
 
 
-                    if (
-                        newMemo === null
-                    ) {
+                    if (newMemo === null) {
                         return;
                     }
 
 
-                    if (
-                        newMemo.trim() === ""
-                    ) {
+                    if (newMemo.trim() === "") {
 
-                        alert(
-                            "メモを空にすることはできません。"
-                        );
+                        alert("メモを空にすることはできません。");
 
                         return;
+
                     }
 
 
                     memos[index] =
                         newMemo.trim();
 
-
-                    localStorage.setItem(
-                        "memos",
-                        JSON.stringify(memos)
-                    );
-
+                    saveMemos();
 
                     displayMemos();
+
+
+                    completeMissionById("edit");
 
                 }
             );
@@ -1197,9 +1173,7 @@ function displayMemos() {
 
             // 削除
             const deleteButton =
-                document.createElement(
-                    "button"
-                );
+                document.createElement("button");
 
             deleteButton.textContent =
                 "🗑️ 削除";
@@ -1207,47 +1181,30 @@ function displayMemos() {
             deleteButton.className =
                 "delete-button";
 
-
             deleteButton.addEventListener(
                 "click",
                 function() {
 
-                    const result =
-                        confirm(
-                            "このメモを削除しますか？"
-                        );
-
-
-                    if (result) {
-
-                        memos.splice(
-                            index,
-                            1
-                        );
-
-
-                        localStorage.setItem(
-                            "memos",
-                            JSON.stringify(memos)
-                        );
-
-
-                        displayMemos();
-
+                    if (!confirm("このメモを削除しますか？")) {
+                        return;
                     }
+
+
+                    memos.splice(index, 1);
+
+                    saveMemos();
+
+                    displayMemos();
+
+
+                    completeMissionById("delete");
 
                 }
             );
 
 
-            buttons.appendChild(
-                editButton
-            );
-
-            buttons.appendChild(
-                deleteButton
-            );
-
+            buttons.appendChild(editButton);
+            buttons.appendChild(deleteButton);
 
             div.appendChild(buttons);
 
@@ -1273,30 +1230,61 @@ saveButton.addEventListener(
 
         if (memo === "") {
 
-            alert(
-                "メモを入力してください！"
-            );
+            alert("メモを入力してください！");
 
             return;
+
         }
 
 
         memos.push(memo);
 
-
-        localStorage.setItem(
-            "memos",
-            JSON.stringify(memos)
-        );
+        saveMemos();
 
 
-        memoInput.value = "";
-
+        memoInput.value =
+            "";
 
         displayMemos();
 
+
+        completeMissionById("add");
+
     }
 );
+
+
+// 「メモを確認する」：メモ一覧が画面に見えたら達成
+let memoListVisible = false;
+
+function checkMemoViewMission() {
+
+    if (
+        memoListVisible &&
+        memos.length > 0 &&
+        missionPickerOverlay.hidden
+    ) {
+
+        completeMissionById("view");
+
+    }
+
+}
+
+if ("IntersectionObserver" in window) {
+
+    new IntersectionObserver(
+        entries => {
+
+            memoListVisible =
+                entries[0].isIntersecting;
+
+            checkMemoViewMission();
+
+        }
+    ).observe(memoList);
+
+}
 
 
 // ====================
@@ -1304,56 +1292,50 @@ saveButton.addEventListener(
 // ====================
 
 const calendar =
-    document.getElementById(
-        "calendar"
-    );
+    document.getElementById("calendar");
 
 const monthTitle =
-    document.getElementById(
-        "monthTitle"
-    );
+    document.getElementById("monthTitle");
 
 const prevMonth =
-    document.getElementById(
-        "prevMonth"
-    );
+    document.getElementById("prevMonth");
 
 const nextMonth =
-    document.getElementById(
-        "nextMonth"
-    );
+    document.getElementById("nextMonth");
 
 const eventDate =
-    document.getElementById(
-        "eventDate"
-    );
+    document.getElementById("eventDate");
 
 const eventText =
-    document.getElementById(
-        "eventText"
-    );
+    document.getElementById("eventText");
 
 const addEvent =
-    document.getElementById(
-        "addEvent"
-    );
+    document.getElementById("addEvent");
 
 const upcomingEvents =
-    document.getElementById(
-        "upcomingEvents"
-    );
+    document.getElementById("upcomingEvents");
 
 
-// 表示中の月
+// 表示中の月（日付を1日にしておくと、31日→翌月で月が飛ぶのを防げる）
 let currentDate =
     new Date();
+
+currentDate.setDate(1);
 
 
 // 予定
 let events =
-    JSON.parse(
-        localStorage.getItem("events")
-    ) || [];
+    JSON.parse(localStorage.getItem("events")) || [];
+
+
+function saveEvents() {
+
+    localStorage.setItem(
+        "events",
+        JSON.stringify(events)
+    );
+
+}
 
 
 // 予定固有のID生成
@@ -1387,32 +1369,8 @@ events.forEach(
 
 if (needsResave) {
 
-    localStorage.setItem(
-        "events",
-        JSON.stringify(events)
-    );
+    saveEvents();
 
-}
-
-
-// 日付を YYYY-MM-DD にする
-function getDateString(date) {
-
-    const year =
-        date.getFullYear();
-
-    const month =
-        String(
-            date.getMonth() + 1
-        ).padStart(2, "0");
-
-    const day =
-        String(
-            date.getDate()
-        ).padStart(2, "0");
-
-
-    return `${year}-${month}-${day}`;
 }
 
 
@@ -1435,123 +1393,79 @@ function displayCalendar() {
 
     // 月初の曜日
     const firstDay =
-        new Date(
-            year,
-            month,
-            1
-        ).getDay();
-
+        new Date(year, month, 1).getDay();
 
     // 月の日数
     const lastDate =
-        new Date(
-            year,
-            month + 1,
-            0
-        ).getDate();
+        new Date(year, month + 1, 0).getDate();
 
 
     // 空白
-    for (
-        let i = 0;
-        i < firstDay;
-        i++
-    ) {
-
-        const empty =
-            document.createElement(
-                "div"
-            );
+    for (let i = 0; i < firstDay; i++) {
 
         calendar.appendChild(
-            empty
+            document.createElement("div")
         );
 
     }
 
 
     // 日付
-    for (
-        let day = 1;
-        day <= lastDate;
-        day++
-    ) {
+    for (let day = 1; day <= lastDate; day++) {
 
         const div =
-            document.createElement(
-                "div"
-            );
+            document.createElement("div");
 
         div.className =
             "calendar-day";
 
 
-        const date =
-            new Date(
-                year,
-                month,
-                day
-            );
-
-
         const dateString =
-            getDateString(date);
+            getDateString(new Date(year, month, day));
 
 
         // 今日
-        if (
-            dateString === today
-        ) {
+        if (dateString === today) {
 
-            div.classList.add(
-                "today"
-            );
+            div.classList.add("today");
 
         }
 
 
-        div.innerHTML =
-            `<strong>${day}</strong>`;
+        const dayNumber =
+            document.createElement("strong");
+
+        dayNumber.textContent =
+            day;
+
+        div.appendChild(dayNumber);
 
 
         // その日の予定
         const dayEvents =
             events.filter(
-                event =>
-                    event.date ===
-                    dateString
+                event => event.date === dateString
             );
 
 
-        if (
-            dayEvents.length > 0
-        ) {
+        if (dayEvents.length > 0) {
 
-            div.classList.add(
-                "event-day"
-            );
+            div.classList.add("event-day");
 
 
             dayEvents.forEach(
                 event => {
 
                     const span =
-                        document.createElement(
-                            "span"
-                        );
+                        document.createElement("span");
 
                     span.className =
                         "event-dot";
 
-
                     span.textContent =
-                        "📌 " +
-                        event.text;
+                        "📌 " + event.text;
 
-
-                    div.appendChild(
-                        span
-                    );
+                    div.appendChild(span);
 
                 }
             );
@@ -1562,17 +1476,11 @@ function displayCalendar() {
         // 日付をクリックしたら、その日の予定を設定する画面を開く
         div.addEventListener(
             "click",
-            function() {
-
-                openDayModal(dateString);
-
-            }
+            () => openDayModal(dateString)
         );
 
 
-        calendar.appendChild(
-            div
-        );
+        calendar.appendChild(div);
 
     }
 
@@ -1590,6 +1498,8 @@ prevMonth.addEventListener(
 
         displayCalendar();
 
+        completeMissionById("calendar");
+
     }
 );
 
@@ -1604,6 +1514,8 @@ nextMonth.addEventListener(
         );
 
         displayCalendar();
+
+        completeMissionById("calendar");
 
     }
 );
@@ -1624,34 +1536,24 @@ addEvent.addEventListener(
             eventText.value.trim();
 
 
-        if (
-            date === "" ||
-            text === ""
-        ) {
+        if (date === "" || text === "") {
 
-            alert(
-                "日付と予定を入力してください！"
-            );
+            alert("日付と予定を入力してください！");
 
             return;
+
         }
 
 
         events.push({
 
             id: generateEventId(),
-
             date: date,
-
             text: text
 
         });
 
-
-        localStorage.setItem(
-            "events",
-            JSON.stringify(events)
-        );
+        saveEvents();
 
 
         eventDate.value = "";
@@ -1674,69 +1576,30 @@ function displayUpcomingEvents() {
     upcomingEvents.innerHTML = "";
 
 
-    const now =
-        new Date();
-
-    now.setHours(
-        0, 0, 0, 0
-    );
-
-
     const upcoming =
         events
-        .map(event => {
-
-            const date =
-                new Date(
-                    event.date
-                );
-
-            date.setHours(
-                0, 0, 0, 0
-            );
+            .map(
+                event => ({
+                    ...event,
+                    diff: daysBetween(today, event.date)
+                })
+            )
+            .filter(event => event.diff >= 0)
+            .sort((a, b) => a.diff - b.diff);
 
 
-            const diff =
-                Math.round(
-                    (
-                        date - now
-                    )
-                    /
-                    (
-                        1000 *
-                        60 *
-                        60 *
-                        24
-                    )
-                );
+    if (upcoming.length === 0) {
 
+        const empty =
+            document.createElement("p");
 
-            return {
-                ...event,
-                diff: diff
-            };
+        empty.className =
+            "no-event";
 
-        })
+        empty.textContent =
+            "予定はありません";
 
-
-        .filter(
-            event =>
-                event.diff >= 0
-        )
-
-
-        .sort(
-            (a, b) =>
-                a.diff - b.diff
-        );
-
-
-    if (
-        upcoming.length === 0
-    ) {
-
-        upcomingEvents.innerHTML =
-            '<p class="no-event">予定はありません</p>';
+        upcomingEvents.appendChild(empty);
 
         return;
 
@@ -1748,9 +1611,7 @@ function displayUpcomingEvents() {
         .forEach(event => {
 
             const div =
-                document.createElement(
-                    "div"
-                );
+                document.createElement("div");
 
             div.className =
                 "event-item";
@@ -1758,76 +1619,60 @@ function displayUpcomingEvents() {
 
             let countdown;
 
+            if (event.diff === 0) {
 
-            if (
-                event.diff === 0
-            ) {
+                countdown = "🔴 今日！";
+                div.classList.add("event-today");
 
-                countdown =
-                    "🔴 今日！";
+            } else if (event.diff === 1) {
 
-                div.classList.add(
-                    "event-today"
-                );
+                countdown = "🟠 明日！";
+                div.classList.add("event-tomorrow");
 
-            }
+            } else if (event.diff <= 3) {
 
-            else if (
-                event.diff === 1
-            ) {
+                countdown = `🟡 あと${event.diff}日`;
+                div.classList.add("event-soon");
 
-                countdown =
-                    "🟠 明日！";
+            } else {
 
-                div.classList.add(
-                    "event-tomorrow"
-                );
-
-            }
-
-            else if (
-                event.diff <= 3
-            ) {
-
-                countdown =
-                    `🟡 あと${event.diff}日`;
-
-                div.classList.add(
-                    "event-soon"
-                );
-
-            }
-
-            else {
-
-                countdown =
-                    `あと${event.diff}日`;
+                countdown = `あと${event.diff}日`;
 
             }
 
 
-            // 本文
+            // 本文（入力された文字は textContent で入れる）
             const info =
-                document.createElement(
-                    "div"
-                );
+                document.createElement("div");
 
-            info.innerHTML = `
-                <strong>${event.date}</strong>
-                <br>
-                ${event.text}
-                <br>
-                ${countdown}
-            `;
+            const dateEl =
+                document.createElement("strong");
+
+            dateEl.textContent =
+                event.date;
+
+            const textEl =
+                document.createElement("div");
+
+            textEl.textContent =
+                event.text;
+
+            const countdownEl =
+                document.createElement("div");
+
+            countdownEl.textContent =
+                countdown;
+
+            info.appendChild(dateEl);
+            info.appendChild(textEl);
+            info.appendChild(countdownEl);
 
             div.appendChild(info);
 
 
             // ボタン
             const buttons =
-                document.createElement(
-                    "div"
-                );
+                document.createElement("div");
 
             buttons.className =
                 "memo-buttons";
@@ -1835,9 +1680,7 @@ function displayUpcomingEvents() {
 
             // 編集
             const editButton =
-                document.createElement(
-                    "button"
-                );
+                document.createElement("button");
 
             editButton.textContent =
                 "✏️ 編集";
@@ -1845,78 +1688,61 @@ function displayUpcomingEvents() {
             editButton.className =
                 "edit-button";
 
-
             editButton.addEventListener(
                 "click",
                 function() {
 
-                    const targetIndex =
-                        events.findIndex(
-                            e => e.id === event.id
-                        );
+                    const target =
+                        events.find(e => e.id === event.id);
 
-                    if (targetIndex === -1) {
+                    if (!target) {
                         return;
                     }
 
 
                     const newDate =
-                        prompt(
-                            "日付を変更してください（YYYY-MM-DD）",
-                            events[targetIndex].date
-                        );
+                        prompt("日付を変更してください（YYYY-MM-DD）", target.date);
 
                     if (newDate === null) {
                         return;
                     }
 
+                    const trimmedDate =
+                        newDate.trim();
+
+                    // 形式と、実在する日付か（2月30日などを弾く）を確認
                     if (
-                        !/^\d{4}-\d{2}-\d{2}$/.test(
-                            newDate.trim()
-                        )
+                        !/^\d{4}-\d{2}-\d{2}$/.test(trimmedDate) ||
+                        getDateString(parseDateString(trimmedDate)) !== trimmedDate
                     ) {
 
-                        alert(
-                            "日付はYYYY-MM-DDの形式で入力してください。"
-                        );
+                        alert("日付はYYYY-MM-DDの形式で、正しい日付を入力してください。");
 
                         return;
+
                     }
 
 
                     const newText =
-                        prompt(
-                            "予定を変更してください",
-                            events[targetIndex].text
-                        );
+                        prompt("予定を変更してください", target.text);
 
                     if (newText === null) {
                         return;
                     }
 
-                    if (
-                        newText.trim() === ""
-                    ) {
+                    if (newText.trim() === "") {
 
-                        alert(
-                            "予定を空にすることはできません。"
-                        );
+                        alert("予定を空にすることはできません。");
 
                         return;
+
                     }
 
 
-                    events[targetIndex].date =
-                        newDate.trim();
+                    target.date = trimmedDate;
+                    target.text = newText.trim();
 
-                    events[targetIndex].text =
-                        newText.trim();
-
-
-                    localStorage.setItem(
-                        "events",
-                        JSON.stringify(events)
-                    );
+                    saveEvents();
 
 
                     displayCalendar();
@@ -1928,9 +1754,7 @@ function displayUpcomingEvents() {
 
             // 削除
             const deleteButton =
-                document.createElement(
-                    "button"
-                );
+                document.createElement("button");
 
             deleteButton.textContent =
                 "🗑️ 削除";
@@ -1938,41 +1762,19 @@ function displayUpcomingEvents() {
             deleteButton.className =
                 "delete-button";
 
-
             deleteButton.addEventListener(
                 "click",
                 function() {
 
-                    const result =
-                        confirm(
-                            "この予定を削除しますか？"
-                        );
-
-                    if (!result) {
+                    if (!confirm("この予定を削除しますか？")) {
                         return;
                     }
 
 
-                    const targetIndex =
-                        events.findIndex(
-                            e => e.id === event.id
-                        );
+                    events =
+                        events.filter(e => e.id !== event.id);
 
-                    if (targetIndex === -1) {
-                        return;
-                    }
-
-
-                    events.splice(
-                        targetIndex,
-                        1
-                    );
-
-
-                    localStorage.setItem(
-                        "events",
-                        JSON.stringify(events)
-                    );
+                    saveEvents();
 
 
                     displayCalendar();
@@ -1982,20 +1784,13 @@ function displayUpcomingEvents() {
             );
 
 
-            buttons.appendChild(
-                editButton
-            );
-
-            buttons.appendChild(
-                deleteButton
-            );
+            buttons.appendChild(editButton);
+            buttons.appendChild(deleteButton);
 
             div.appendChild(buttons);
 
 
-            upcomingEvents.appendChild(
-                div
-            );
+            upcomingEvents.appendChild(div);
 
         });
 
@@ -2009,32 +1804,81 @@ displayUpcomingEvents();
 
 // ====================
 // 通知（今日・明日の予定）
+// ・許可は「通知をオンにする」ボタンを押したときだけ聞く
+// ・通知は1日1回だけ
 // ====================
 
-function getTomorrowString() {
+const notifyButton =
+    document.getElementById("notifyButton");
 
-    const date =
-        new Date();
 
-    date.setDate(
-        date.getDate() + 1
-    );
+function updateNotifyButton() {
 
-    return getDateString(date);
+    if (!("Notification" in window)) {
+
+        notifyButton.textContent =
+            "🔕 このブラウザは通知に対応していません";
+
+        notifyButton.disabled =
+            true;
+
+        return;
+
+    }
+
+
+    if (Notification.permission === "granted") {
+
+        notifyButton.textContent =
+            "🔔 予定の通知はオンです";
+
+        notifyButton.disabled =
+            true;
+
+    } else if (Notification.permission === "denied") {
+
+        notifyButton.textContent =
+            "🔕 通知はブラウザの設定でブロック中";
+
+        notifyButton.disabled =
+            true;
+
+    } else {
+
+        notifyButton.textContent =
+            "🔔 予定の通知をオンにする";
+
+        notifyButton.disabled =
+            false;
+
+    }
 
 }
 
 
-function notifyTodayTomorrowEvents() {
+function notifyTodayTomorrowEvents(force = false) {
 
-    // このブラウザが通知に対応しているか確認
-    if (!("Notification" in window)) {
+    if (
+        !("Notification" in window) ||
+        Notification.permission !== "granted"
+    ) {
         return;
     }
 
 
+    // 今日すでに通知していたら出さない
+    if (!force && localStorage.getItem("notifiedDate") === today) {
+        return;
+    }
+
+
+    const tomorrowDate =
+        new Date();
+
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+
     const tomorrowString =
-        getTomorrowString();
+        getDateString(tomorrowDate);
 
 
     const targetEvents =
@@ -2050,7 +1894,7 @@ function notifyTodayTomorrowEvents() {
     }
 
 
-    function showNotifications() {
+    try {
 
         targetEvents.forEach(
             event => {
@@ -2060,47 +1904,51 @@ function notifyTodayTomorrowEvents() {
                         ? "🔴 今日の予定"
                         : "🟠 明日の予定";
 
-
                 new Notification(
                     label,
                     {
                         body: event.text,
-                        icon: "📝"
+                        icon: "タイトルロゴ.png"
                     }
                 );
 
             }
         );
 
-    }
+        localStorage.setItem("notifiedDate", today);
 
+    } catch (e) {
 
-    // すでに許可されている場合
-    if (Notification.permission === "granted") {
-
-        showNotifications();
+        // スマホのブラウザなど、ページから直接通知を出せない環境では何もしない
 
     }
 
-    // まだ確認していない場合は許可を求める
-    else if (Notification.permission !== "denied") {
+}
+
+
+notifyButton.addEventListener(
+    "click",
+    function() {
+
+        if (!("Notification" in window)) {
+            return;
+        }
 
         Notification.requestPermission().then(
-            function(permission) {
+            function() {
 
-                if (permission === "granted") {
-                    showNotifications();
-                }
+                updateNotifyButton();
+
+                notifyTodayTomorrowEvents(true);
 
             }
         );
 
     }
+);
 
-    // "denied" の場合は何もしない（ブラウザ側でブロックされている）
 
-}
-
+updateNotifyButton();
 
 notifyTodayTomorrowEvents();
 
@@ -2110,17 +1958,13 @@ notifyTodayTomorrowEvents();
 // ====================
 
 const themeColorPicker =
-    document.getElementById(
-        "themeColorPicker"
-    );
+    document.getElementById("themeColorPicker");
 
 const themeSwatches =
-    document.querySelectorAll(
-        ".theme-swatch"
-    );
+    document.querySelectorAll(".theme-swatch");
 
 
-// 共通: hexを rgb に変換
+// hex を rgb に変換
 function hexToRgb(hex) {
 
     return {
@@ -2141,44 +1985,32 @@ function toHex(value) {
 }
 
 
-// 人の目に感じる明るさ（0〜255）を計算
+// 人の目に感じる明るさ（0〜255）
 function getBrightness(hex) {
 
     const { r, g, b } =
         hexToRgb(hex);
 
-    return (
-        r * 0.299 +
-        g * 0.587 +
-        b * 0.114
-    );
+    return r * 0.299 + g * 0.587 + b * 0.114;
 
 }
 
 
-// 明るいバリエーションの色を計算（グラデーション用）
-function getLighterColor(hex) {
+// 明るくした色（amount: 0〜1）
+function getLighterColor(hex, amount = 0.4) {
 
     const { r, g, b } =
         hexToRgb(hex);
 
     const lighten = value =>
-        Math.round(
-            value + (255 - value) * 0.4
-        );
+        value + (255 - value) * amount;
 
-
-    return (
-        "#" +
-        toHex(lighten(r)) +
-        toHex(lighten(g)) +
-        toHex(lighten(b))
-    );
+    return "#" + toHex(lighten(r)) + toHex(lighten(g)) + toHex(lighten(b));
 
 }
 
 
-// 濃いバリエーションの色を計算（白系カラーでも文字として見えるように）
+// 濃くした色（amount: 0〜1）
 function getDarkerColor(hex, amount) {
 
     const { r, g, b } =
@@ -2187,13 +2019,7 @@ function getDarkerColor(hex, amount) {
     const darken = value =>
         value * (1 - amount);
 
-
-    return (
-        "#" +
-        toHex(darken(r)) +
-        toHex(darken(g)) +
-        toHex(darken(b))
-    );
+    return "#" + toHex(darken(r)) + toHex(darken(g)) + toHex(darken(b));
 
 }
 
@@ -2208,8 +2034,7 @@ function getOnThemeColor(hex) {
 }
 
 
-// 白いカード等の上でテーマカラーを文字色として使う時、
-// カードの背景（ライト/ダーク）に対して読みにくい明るさなら自動調整する
+// カードの上でテーマカラーを文字色として使う時、読みにくい明るさなら自動調整
 function getReadableThemeColor(hex, isDark) {
 
     const brightness =
@@ -2218,54 +2043,25 @@ function getReadableThemeColor(hex, isDark) {
 
     if (isDark) {
 
-        // ダークモード：カード背景が暗いので、暗すぎる色は明るくする
-        if (brightness < 90) {
-            return getLighterColorAmount(hex, 0.6);
-        }
-
-        if (brightness < 140) {
-            return getLighterColorAmount(hex, 0.3);
-        }
+        // ダークモード：暗すぎる色は明るくする
+        if (brightness < 90)  return getLighterColor(hex, 0.6);
+        if (brightness < 140) return getLighterColor(hex, 0.3);
 
         return hex;
 
     }
 
 
-    // ライトモード：カード背景が明るいので、明るすぎる色は濃くする
-    if (brightness > 210) {
-        return getDarkerColor(hex, 0.65);
-    }
-
-    if (brightness > 170) {
-        return getDarkerColor(hex, 0.35);
-    }
+    // ライトモード：明るすぎる色は濃くする
+    if (brightness > 210) return getDarkerColor(hex, 0.65);
+    if (brightness > 170) return getDarkerColor(hex, 0.35);
 
     return hex;
 
 }
 
 
-function getLighterColorAmount(hex, amount) {
-
-    const { r, g, b } =
-        hexToRgb(hex);
-
-    const lighten = value =>
-        value + (255 - value) * amount;
-
-
-    return (
-        "#" +
-        toHex(lighten(r)) +
-        toHex(lighten(g)) +
-        toHex(lighten(b))
-    );
-
-}
-
-
-// 現在のテーマカラー・ダークモード状態を保持
+// 現在のテーマカラー・ダークモード状態
 let currentThemeColor = "#4a90e2";
 let isDarkModeActive = false;
 
@@ -2275,10 +2071,7 @@ function updateThemeTextColors() {
 
     document.documentElement.style.setProperty(
         "--theme-color-text",
-        getReadableThemeColor(
-            currentThemeColor,
-            isDarkModeActive
-        )
+        getReadableThemeColor(currentThemeColor, isDarkModeActive)
     );
 
 }
@@ -2289,21 +2082,12 @@ function applyThemeColor(color, save = true) {
 
     currentThemeColor = color;
 
+    const root =
+        document.documentElement.style;
 
-    document.documentElement.style.setProperty(
-        "--theme-color",
-        color
-    );
-
-    document.documentElement.style.setProperty(
-        "--theme-color-light",
-        getLighterColor(color)
-    );
-
-    document.documentElement.style.setProperty(
-        "--on-theme-color",
-        getOnThemeColor(color)
-    );
+    root.setProperty("--theme-color", color);
+    root.setProperty("--theme-color-light", getLighterColor(color));
+    root.setProperty("--on-theme-color", getOnThemeColor(color));
 
     updateThemeTextColors();
 
@@ -2316,8 +2100,7 @@ function applyThemeColor(color, save = true) {
 
             swatch.classList.toggle(
                 "selected",
-                swatch.dataset.color.toLowerCase() ===
-                    color.toLowerCase()
+                swatch.dataset.color.toLowerCase() === color.toLowerCase()
             );
 
         }
@@ -2326,10 +2109,7 @@ function applyThemeColor(color, save = true) {
 
     if (save) {
 
-        localStorage.setItem(
-            "themeColor",
-            color
-        );
+        localStorage.setItem("themeColor", color);
 
     }
 
@@ -2342,13 +2122,7 @@ themeSwatches.forEach(
 
         swatch.addEventListener(
             "click",
-            () => {
-
-                applyThemeColor(
-                    swatch.dataset.color
-                );
-
-            }
+            () => applyThemeColor(swatch.dataset.color)
         );
 
     }
@@ -2358,28 +2132,20 @@ themeSwatches.forEach(
 // カラーピッカーで自由に選んだとき
 themeColorPicker.addEventListener(
     "input",
-    () => {
-
-        applyThemeColor(
-            themeColorPicker.value
-        );
-
-    }
+    () => applyThemeColor(themeColorPicker.value)
 );
 
 
-// 保存されているテーマカラーを読み込み
+// 保存されているテーマカラーを読み込み（なければデフォルトの青）
 const savedThemeColor =
     localStorage.getItem("themeColor");
 
-if (savedThemeColor) {
-
-    applyThemeColor(
-        savedThemeColor,
-        false
-    );
-
-}
+applyThemeColor(
+    savedThemeColor && /^#[0-9a-f]{6}$/i.test(savedThemeColor)
+        ? savedThemeColor
+        : "#4a90e2",
+    false
+);
 
 
 // ====================
@@ -2387,9 +2153,7 @@ if (savedThemeColor) {
 // ====================
 
 const darkModeToggle =
-    document.getElementById(
-        "darkModeToggle"
-    );
+    document.getElementById("darkModeToggle");
 
 
 function applyDarkMode(isDark, save = true) {
@@ -2408,10 +2172,7 @@ function applyDarkMode(isDark, save = true) {
 
     if (save) {
 
-        localStorage.setItem(
-            "darkMode",
-            isDark ? "1" : "0"
-        );
+        localStorage.setItem("darkMode", isDark ? "1" : "0");
 
     }
 
@@ -2420,13 +2181,7 @@ function applyDarkMode(isDark, save = true) {
 
 darkModeToggle.addEventListener(
     "change",
-    () => {
-
-        applyDarkMode(
-            darkModeToggle.checked
-        );
-
-    }
+    () => applyDarkMode(darkModeToggle.checked)
 );
 
 
@@ -2442,16 +2197,15 @@ if (savedDarkMode === "1") {
 
     applyDarkMode(false, false);
 
-} else if (
-    window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-) {
+} else {
 
-    applyDarkMode(true, false);
+    applyDarkMode(
+        !!(window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches),
+        false
+    );
 
 }
-
-
 
 
 // ====================
@@ -2514,10 +2268,7 @@ function createManagerItem(mission, onDelete) {
 
         deleteBtn.textContent = "🗑️ 削除";
 
-        deleteBtn.addEventListener(
-            "click",
-            onDelete
-        );
+        deleteBtn.addEventListener("click", onDelete);
 
         item.appendChild(deleteBtn);
 
@@ -2541,6 +2292,19 @@ function createManagerHeading(text) {
 }
 
 
+function createManagerEmpty(text) {
+
+    const empty =
+        document.createElement("p");
+
+    empty.className = "manager-empty";
+    empty.textContent = text;
+
+    return empty;
+
+}
+
+
 // 一覧を作り直す
 function renderMissionManager() {
 
@@ -2549,57 +2313,41 @@ function renderMissionManager() {
 
     // 自分で追加したミッション
     missionManagerList.appendChild(
-        createManagerHeading("✍️ 自分で追加したミッション")
+        createManagerHeading("✍️ 自分で追加したミッション（手動でチェック）")
     );
 
     if (customMissions.length === 0) {
 
-        const empty =
-            document.createElement("p");
-
-        empty.className =
-            "manager-empty";
-
-        empty.textContent =
-            "まだ自分で追加したミッションはありません";
-
-        missionManagerList.appendChild(empty);
-
-    } else {
-
-        customMissions.forEach(
-            mission => {
-
-                missionManagerList.appendChild(
-                    createManagerItem(
-                        mission,
-                        () => deleteCustomMissionById(mission.id)
-                    )
-                );
-
-            }
+        missionManagerList.appendChild(
+            createManagerEmpty("まだ自分で追加したミッションはありません")
         );
 
     }
 
+    customMissions.forEach(
+        mission => {
 
-    // 最初から入っているミッション（確認のみ）
+            missionManagerList.appendChild(
+                createManagerItem(
+                    mission,
+                    () => deleteCustomMissionById(mission.id)
+                )
+            );
+
+        }
+    );
+
+
+    // 最初から入っているミッション
     missionManagerList.appendChild(
-        createManagerHeading("📦 最初から入っているミッション")
+        createManagerHeading("📦 最初から入っているミッション（自動で達成）")
     );
 
     if (missions.length === 0) {
 
-        const empty =
-            document.createElement("p");
-
-        empty.className =
-            "manager-empty";
-
-        empty.textContent =
-            "最初から入っているミッションは全て削除されています";
-
-        missionManagerList.appendChild(empty);
+        missionManagerList.appendChild(
+            createManagerEmpty("最初から入っているミッションは全て削除されています")
+        );
 
     }
 
@@ -2629,10 +2377,7 @@ function renderMissionManager() {
         restoreBtn.textContent =
             "↩️ 最初のミッションを元に戻す";
 
-        restoreBtn.addEventListener(
-            "click",
-            restoreDefaultMissions
-        );
+        restoreBtn.addEventListener("click", restoreDefaultMissions);
 
         missionManagerList.appendChild(restoreBtn);
 
@@ -2648,16 +2393,11 @@ function removeFromTodayMissions(missionId) {
         dailyMissions.length;
 
     dailyMissions =
-        dailyMissions.filter(
-            m => m.id !== missionId
-        );
+        dailyMissions.filter(m => m.id !== missionId);
 
     if (dailyMissions.length !== before) {
 
-        localStorage.setItem(
-            "dailyMissions",
-            JSON.stringify(dailyMissions)
-        );
+        saveDailyMissions();
 
         displayMissions();
 
@@ -2710,14 +2450,10 @@ function deleteCustomMissionById(missionId) {
         return;
     }
 
-
     customMissions =
-        customMissions.filter(
-            m => m.id !== missionId
-        );
+        customMissions.filter(m => m.id !== missionId);
 
     saveCustomMissions();
-
 
     removeFromTodayMissions(missionId);
 
@@ -2731,18 +2467,9 @@ openMissionManagerButton.addEventListener(
     function() {
 
         // 設定メニューは閉じてから画面を開く
-        const panel =
-            document.getElementById("menuPanel");
+        document.getElementById("menuPanel").classList.remove("open");
 
-        const button =
-            document.getElementById("menuButton");
-
-        panel.classList.remove("open");
-
-        button.setAttribute(
-            "aria-expanded",
-            "false"
-        );
+        document.getElementById("menuButton").setAttribute("aria-expanded", "false");
 
 
         renderMissionManager();
@@ -2756,12 +2483,7 @@ openMissionManagerButton.addEventListener(
 
 missionManagerCloseButton.addEventListener(
     "click",
-    function() {
-
-        missionManagerOverlay.hidden =
-            true;
-
-    }
+    () => { missionManagerOverlay.hidden = true; }
 );
 
 
@@ -2779,7 +2501,6 @@ missionManagerOverlay.addEventListener(
 
     }
 );
-
 
 
 // ====================
@@ -2830,6 +2551,16 @@ function openDayModal(dateString) {
 
     dayModalInput.focus();
 
+
+    // ミッション：カレンダーを確認／予定のある日なら予定も確認
+    completeMissionById("calendar");
+
+    if (events.some(e => e.date === dateString)) {
+
+        completeMissionById("event");
+
+    }
+
 }
 
 
@@ -2840,25 +2571,17 @@ function renderDayModal() {
 
 
     const dayEvents =
-        events.filter(
-            e => e.date === selectedDayString
-        );
+        events.filter(e => e.date === selectedDayString);
 
 
     if (dayEvents.length === 0) {
 
-        const empty =
-            document.createElement("p");
-
-        empty.className =
-            "manager-empty";
-
-        empty.textContent =
-            "この日の予定はまだありません";
-
-        dayModalList.appendChild(empty);
+        dayModalList.appendChild(
+            createManagerEmpty("この日の予定はまだありません")
+        );
 
         return;
+
     }
 
 
@@ -2866,60 +2589,28 @@ function renderDayModal() {
         event => {
 
             const item =
-                document.createElement("div");
+                createManagerItem(
+                    { icon: "📌", name: event.text, reward: 0 },
+                    function() {
 
-            item.className =
-                "manager-item";
+                        if (!confirm("この予定を削除しますか？")) {
+                            return;
+                        }
 
+                        events =
+                            events.filter(e => e.id !== event.id);
 
-            const icon =
-                document.createElement("span");
+                        saveEvents();
 
-            icon.className = "manager-icon";
-            icon.textContent = "📌";
+                        displayCalendar();
+                        displayUpcomingEvents();
+                        renderDayModal();
 
-
-            const name =
-                document.createElement("span");
-
-            name.className = "manager-name";
-            name.textContent = event.text;
-
-
-            const deleteBtn =
-                document.createElement("button");
-
-            deleteBtn.textContent = "🗑️ 削除";
-
-            deleteBtn.addEventListener(
-                "click",
-                function() {
-
-                    if (!confirm("この予定を削除しますか？")) {
-                        return;
                     }
+                );
 
-                    events =
-                        events.filter(
-                            e => e.id !== event.id
-                        );
-
-                    localStorage.setItem(
-                        "events",
-                        JSON.stringify(events)
-                    );
-
-                    displayCalendar();
-                    displayUpcomingEvents();
-                    renderDayModal();
-
-                }
-            );
-
-
-            item.appendChild(icon);
-            item.appendChild(name);
-            item.appendChild(deleteBtn);
+            // 予定にはポイント表示はいらないので消す
+            item.querySelector(".manager-reward").remove();
 
             dayModalList.appendChild(item);
 
@@ -2942,23 +2633,19 @@ dayModalAdd.addEventListener(
             alert("予定を入力してください！");
 
             return;
+
         }
 
 
         events.push({
 
             id: generateEventId(),
-
             date: selectedDayString,
-
             text: text
 
         });
 
-        localStorage.setItem(
-            "events",
-            JSON.stringify(events)
-        );
+        saveEvents();
 
 
         dayModalInput.value = "";
@@ -2977,7 +2664,8 @@ dayModalInput.addEventListener(
     "keydown",
     function(e) {
 
-        if (e.key === "Enter") {
+        // 日本語入力の変換確定の Enter では追加しない
+        if (e.key === "Enter" && !e.isComposing) {
 
             dayModalAdd.click();
 
@@ -2989,12 +2677,7 @@ dayModalInput.addEventListener(
 
 dayModalClose.addEventListener(
     "click",
-    function() {
-
-        dayModalOverlay.hidden =
-            true;
-
-    }
+    () => { dayModalOverlay.hidden = true; }
 );
 
 
@@ -3012,3 +2695,27 @@ dayModalOverlay.addEventListener(
 
     }
 );
+
+
+// ====================
+// 起動時：今日のミッションを選ぶ
+// （全部の準備が終わってから最後に行う）
+// ====================
+
+if (needsMissionSelection) {
+
+    if (getMissionCandidates().length === 0) {
+
+        // 選べるミッションが無い日は、ミッション無しで始める
+        confirmMissionSelection([]);
+
+    } else {
+
+        buildMissionPicker();
+
+        missionPickerOverlay.hidden =
+            false;
+
+    }
+
+}

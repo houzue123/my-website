@@ -1,12 +1,11 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 
 <head>
-   <meta charset="UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>毎日のメモ</title>
+    <title>毎日メモ</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,211 +13,47 @@
 
     <link rel="stylesheet" href="style.css">
 
-    <!-- ☰ メニュー用CSS -->
-    <style>
-        /* =========================
-           ヘッダー
-        ========================= */
+    <!-- 画面が表示される前にテーマ色とダークモードを反映（起動時の色のちらつき防止） -->
+    <script>
+        (function () {
+            try {
+                const root = document.documentElement;
 
-        header {
-            position: relative;
-        }
+                const darkMode = localStorage.getItem("darkMode");
 
-        .header-content {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
+                if (
+                    darkMode === "1" ||
+                    (darkMode === null &&
+                        window.matchMedia &&
+                        window.matchMedia("(prefers-color-scheme: dark)").matches)
+                ) {
+                    root.dataset.theme = "dark";
+                }
 
-        .header-content > div {
-            text-align: center;
-        }
+                const color = localStorage.getItem("themeColor");
 
-        /* メニューボタン */
+                if (color && /^#[0-9a-f]{6}$/i.test(color)) {
+                    const r = parseInt(color.slice(1, 3), 16);
+                    const g = parseInt(color.slice(3, 5), 16);
+                    const b = parseInt(color.slice(5, 7), 16);
 
-        .menu-button {
-            position: absolute;
-            right: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-
-            width: 48px;
-            height: 48px;
-
-            padding: 0;
-
-            background: transparent;
-            color: var(--on-theme-color);
-
-            border: 2px solid var(--on-theme-color);
-            border-radius: 10px;
-
-            font-size: 26px;
-            cursor: pointer;
-        }
-
-        .menu-button:hover {
-            opacity: 0.8;
-        }
-
-
-        /* =========================
-           設定メニュー
-        ========================= */
-
-        .menu-panel {
-            display: none;
-
-            position: absolute;
-
-            top: 100%;
-            right: 20px;
-
-            width: 280px;
-
-            padding: 20px;
-
-            background: var(--card-bg);
-            color: var(--text);
-
-            border-radius: 12px;
-
-            box-shadow: 0 5px 20px var(--shadow);
-
-            z-index: 1000;
-
-            text-align: left;
-
-            box-sizing: border-box;
-        }
-
-        .menu-panel.open {
-            display: block;
-        }
-
-        .menu-panel h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 10px;
-        }
-
-        .menu-panel h4 {
-            margin: 15px 0 10px;
-        }
-
-
-        /* テーマカラー */
-
-        .theme-swatches {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .theme-swatch {
-            width: 34px;
-            height: 34px;
-
-            padding: 0;
-
-            border-radius: 50%;
-
-            border: 2px solid var(--card-bg);
-
-            box-shadow:
-                0 0 0 1px var(--border);
-
-            cursor: pointer;
-        }
-
-        .theme-swatch:hover {
-            transform: scale(1.1);
-        }
-
-        .theme-swatch.selected {
-            box-shadow:
-                0 0 0 2px var(--theme-color-text);
-        }
-
-
-        /* 自由に色を選ぶ */
-
-        .theme-custom {
-            display: flex;
-
-            align-items: center;
-
-            gap: 8px;
-
-            margin-top: 15px;
-
-            color: var(--text-muted);
-        }
-
-        .theme-custom input[type="color"] {
-            width: 42px;
-            height: 32px;
-
-            padding: 2px;
-
-            border: 1px solid var(--input-border);
-            border-radius: 8px;
-
-            background: none;
-
-            cursor: pointer;
-        }
-
-
-        /* ダークモード */
-
-        .darkmode-setting {
-            display: flex;
-
-            justify-content: space-between;
-            align-items: center;
-
-            margin-top: 20px;
-            padding-top: 15px;
-
-            border-top: 1px solid var(--border);
-        }
-
-
-        /* スマホ */
-
-        @media (max-width: 600px) {
-
-            .menu-button {
-                right: 10px;
-
-                width: 42px;
-                height: 42px;
-
-                font-size: 22px;
+                    root.style.setProperty("--theme-color", color);
+                    root.style.setProperty(
+                        "--on-theme-color",
+                        (r * 0.299 + g * 0.587 + b * 0.114) > 170 ? "#333333" : "#ffffff"
+                    );
+                }
+            } catch (e) {
+                // 読み込めなくても普通に起動する
             }
-
-            .menu-panel {
-                right: 10px;
-
-                width: calc(100% - 20px);
-                max-width: 300px;
-            }
-
-            .header-content {
-                padding-right: 45px;
-            }
-        }
-    </style>
+        })();
+    </script>
 </head>
 
 
 <body>
 
-<!-- 最初に表示するタイトル画面 -->
+<!-- 最初に表示するタイトル画面（タップで閉じる） -->
 <div id="titleScreen">
     <div class="title-logo">
         <div class="title-icon">📝</div>
@@ -238,8 +73,7 @@
     <div class="header-content">
 
         <div>
-             <img src="タイトルロゴ.png" alt="ロゴ"class="section-image">
-
+            <img src="タイトルロゴ.png" alt="毎日メモ" class="section-image">
         </div>
 
         <!-- ☰ メニューボタン -->
@@ -276,53 +110,12 @@
             class="theme-swatches"
             id="themeSwatches">
 
-            <button
-                class="theme-swatch"
-                data-color="#4a90e2"
-                style="background:#4a90e2"
-                title="ブルー"
-                aria-label="ブルー">
-            </button>
-
-            <button
-                class="theme-swatch"
-                data-color="#2ecc71"
-                style="background:#2ecc71"
-                title="グリーン"
-                aria-label="グリーン">
-            </button>
-
-            <button
-                class="theme-swatch"
-                data-color="#e74c3c"
-                style="background:#e74c3c"
-                title="レッド"
-                aria-label="レッド">
-            </button>
-
-            <button
-                class="theme-swatch"
-                data-color="#f39c12"
-                style="background:#f39c12"
-                title="オレンジ"
-                aria-label="オレンジ">
-            </button>
-
-            <button
-                class="theme-swatch"
-                data-color="#9b59b6"
-                style="background:#9b59b6"
-                title="パープル"
-                aria-label="パープル">
-            </button>
-
-            <button
-                class="theme-swatch"
-                data-color="#e91e8c"
-                style="background:#e91e8c"
-                title="ピンク"
-                aria-label="ピンク">
-            </button>
+            <button class="theme-swatch" data-color="#4a90e2" style="background:#4a90e2" title="ブルー" aria-label="ブルー"></button>
+            <button class="theme-swatch" data-color="#2ecc71" style="background:#2ecc71" title="グリーン" aria-label="グリーン"></button>
+            <button class="theme-swatch" data-color="#e74c3c" style="background:#e74c3c" title="レッド" aria-label="レッド"></button>
+            <button class="theme-swatch" data-color="#f39c12" style="background:#f39c12" title="オレンジ" aria-label="オレンジ"></button>
+            <button class="theme-swatch" data-color="#9b59b6" style="background:#9b59b6" title="パープル" aria-label="パープル"></button>
+            <button class="theme-swatch" data-color="#e91e8c" style="background:#e91e8c" title="ピンク" aria-label="ピンク"></button>
 
         </div>
 
@@ -351,6 +144,22 @@
                 type="button">
 
                 📋 ミッション一覧を確認
+
+            </button>
+
+        </div>
+
+
+        <!-- 通知 -->
+
+        <div class="menu-section">
+
+            <button
+                id="notifyButton"
+                class="menu-wide-button"
+                type="button">
+
+                🔔 予定の通知をオンにする
 
             </button>
 
@@ -438,8 +247,8 @@
             </p>
 
         </div>
-        
-         <div class="title-block">
+
+        <div class="title-block">
 
             <h3>💎 ポイント称号</h3>
 
@@ -494,17 +303,17 @@
 
             <span id="missionCount">0</span>
             /
-            <span id="missionTotal">3</span>
+            <span id="missionTotal">0</span>
 
         </p>
 
 
         <p id="missionBonus"></p>
 
-  <!-- =========================
-         自分でミッションを追加
-    ========================= -->
 
+        <!-- =========================
+             自分でミッションを追加
+        ========================= -->
 
         <h2>➕ 自分のミッションを追加</h2>
 
@@ -538,10 +347,7 @@
         <h2>📝 メモ</h2>
 
 
-        <textarea
-            id="memoInput"
-            placeholder="ここにメモを書いてください">
-        </textarea>
+        <textarea id="memoInput" placeholder="ここにメモを書いてください"></textarea>
 
 
         <button id="saveButton">
@@ -643,10 +449,6 @@
 
 
 
-<!-- =========================
-     JavaScript
-========================= -->
-
 <!-- 今日のミッションを選ぶ画面 -->
 <div id="missionPickerOverlay" class="mission-picker-overlay" hidden>
     <div class="mission-picker-modal">
@@ -702,6 +504,15 @@
     </div>
 </div>
 
+<!-- ミッション達成などのお知らせ -->
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+
+
+<!-- =========================
+     JavaScript
+========================= -->
+
 <script src="script.js"></script>
 
 
@@ -731,10 +542,7 @@
     );
 
 
-    /*
-        メニューの外側をクリックしたら閉じる
-    */
-
+    // メニューの外側をクリックしたら閉じる
     document.addEventListener(
         "click",
         function (event) {
@@ -758,10 +566,32 @@
 
 </script>
 
-<script> // 1.5秒後にタイトル画面を消す 
-			setTimeout(function ()
-			 { const titleScreen = document.getElementById("titleScreen");
-			  titleScreen.classList.add("hide"); }, 1500);
- </script>
+
+<!-- タイトル画面：タップですぐ消える／何もしなくても1.5秒後に消える -->
+<script>
+
+    const titleScreen =
+        document.getElementById("titleScreen");
+
+    function hideTitleScreen() {
+        titleScreen.classList.add("hide");
+    }
+
+    titleScreen.addEventListener("click", hideTitleScreen);
+
+    document.addEventListener(
+        "keydown",
+        function (e) {
+            if (e.key === "Enter" || e.key === " " || e.key === "Escape") {
+                hideTitleScreen();
+            }
+        },
+        { once: true }
+    );
+
+    setTimeout(hideTitleScreen, 1500);
+
+</script>
+
 </body>
 </html>
