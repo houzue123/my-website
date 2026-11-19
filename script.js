@@ -1576,8 +1576,11 @@ function displayCalendar() {
             "calendar-day";
 
 
+        const cellDate =
+            new Date(year, month, day);
+
         const dateString =
-            getDateString(new Date(year, month, day));
+            getDateString(cellDate);
 
 
         // 今日
@@ -1588,8 +1591,19 @@ function displayCalendar() {
         }
 
 
+        // 日曜は赤、土曜は青
+        if (cellDate.getDay() === 0) {
+            div.classList.add("sun");
+        } else if (cellDate.getDay() === 6) {
+            div.classList.add("sat");
+        }
+
+
         const dayNumber =
             document.createElement("strong");
+
+        dayNumber.className =
+            "day-number";
 
         dayNumber.textContent =
             day;
@@ -1801,27 +1815,50 @@ function displayUpcomingEvents() {
             const info =
                 document.createElement("div");
 
+            // 1行目：日付（11月19日（木））とカウントダウン
+            const eventDateObj =
+                parseDateString(event.date);
+
+            const headRow =
+                document.createElement("div");
+
+            headRow.className =
+                "event-head";
+
             const dateEl =
-                document.createElement("strong");
+                document.createElement("span");
+
+            dateEl.className =
+                "event-date";
 
             dateEl.textContent =
-                event.date;
-
-            const textEl =
-                document.createElement("div");
-
-            textEl.textContent =
-                event.text;
+                `${eventDateObj.getMonth() + 1}月${eventDateObj.getDate()}日（${WEEKDAYS[eventDateObj.getDay()]}）`;
 
             const countdownEl =
-                document.createElement("div");
+                document.createElement("span");
+
+            countdownEl.className =
+                "event-countdown";
 
             countdownEl.textContent =
                 countdown;
 
-            info.appendChild(dateEl);
+            headRow.appendChild(dateEl);
+            headRow.appendChild(countdownEl);
+
+
+            // 2行目：予定の内容（大きく）
+            const textEl =
+                document.createElement("div");
+
+            textEl.className =
+                "event-text";
+
+            textEl.textContent =
+                event.text;
+
+            info.appendChild(headRow);
             info.appendChild(textEl);
-            info.appendChild(countdownEl);
 
             div.appendChild(info);
 
