@@ -144,40 +144,108 @@ document.getElementById("streak").textContent =
 
 
 // ====================
-// 応援メッセージ
+// コメントの選び方（文は messages.js にあります）
+// ・同じ日は同じコメント、日が変わると別のコメント
+// ・タップすると次のコメントに切り替わる
 // ====================
 
-const streakMessages = [
+// 文字列から数を作る（日付ごとに選ぶコメントを決めるため）
+function hashString(text) {
 
-    { min: 0,  message: "🌱 千里の道も一歩から。今日という一日を、大切に始めよう。" },
-    { min: 2,  message: "🌿 継続は力なり。小さな積み重ねが、未来の自分をつくる。" },
-    { min: 3,  message: "☀️ 三日坊主を越えた先に、新しい自分が待っている。" },
-    { min: 7,  message: "🌸 日進月歩。一週間前の自分より、少しずつ前へ。" },
-    { min: 14, message: "🍀 塵も積もれば山となる。何気ない日々が、大きな力に変わる。" },
-    { min: 30, message: "🌷 有言実行。続けてきた日々が、あなたの自信になる。" },
-    { min: 60, message: "✨ 不撓不屈。歩みを止めなかった日々は、決して無駄にはならない。" }
+    let hash = 0;
 
-];
+    for (let i = 0; i < text.length; i++) {
+        hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+    }
+
+    return hash;
+
+}
 
 
-function updateStreakMessage() {
+// タップで進めた回数（場所ごと）
+const commentOffsets = {};
+
+
+// list から今日のコメントを1つ選ぶ（key は場所ごとに変える）
+function pickComment(list, key) {
+
+    const offset =
+        commentOffsets[key] || 0;
+
+    const index =
+        (hashString(today + key) + offset) % list.length;
+
+    return list[index];
+
+}
+
+
+// 値（日数・pt）に合う、条件を満たす最後のものを探す
+function findLevel(list, value) {
 
     let current =
-        streakMessages[0];
+        list[0];
 
-    streakMessages.forEach(
+    list.forEach(
         item => {
-            if (streak >= item.min) {
+            if (value >= item.min) {
                 current = item;
             }
         }
     );
 
-    document.getElementById("streakMessage").textContent =
-        current.message;
+    return current;
 
 }
 
+
+// タップでコメントを切り替えられるようにする
+function makeCommentTappable(element, key, refresh) {
+
+    element.title =
+        "タップで別のコメント";
+
+    element.addEventListener(
+        "click",
+        function() {
+
+            commentOffsets[key] =
+                (commentOffsets[key] || 0) + 1;
+
+            refresh();
+
+            // ふわっと切り替える
+            element.classList.remove("comment-pop");
+            void element.offsetWidth;
+            element.classList.add("comment-pop");
+
+        }
+    );
+
+}
+
+
+// ====================
+// 応援メッセージ
+// ====================
+
+const streakMessageEl =
+    document.getElementById("streakMessage");
+
+
+function updateStreakMessage() {
+
+    const level =
+        findLevel(STREAK_MESSAGES, streak);
+
+    streakMessageEl.textContent =
+        pickComment(level.messages, "streakMessage" + level.min);
+
+}
+
+
+makeCommentTappable(streakMessageEl, "streakMessage" + findLevel(STREAK_MESSAGES, streak).min, updateStreakMessage);
 
 updateStreakMessage();
 
@@ -187,7 +255,8 @@ updateStreakMessage();
 // ====================
 
 // list: [{ min, name }]、value: 今の値、unit: "日" や "pt"
-function updateTitleArea(list, value, unit, titleEl, fillEl, nextEl) {
+// commentEl：称号のコメントを出す場所、commentKey：コメントを選ぶための名前
+function updateTitleArea(list, value, unit, titleEl, fillEl, nextEl, commentEl, commentKey) {
 
     // 条件を満たす最後の称号と、その次の称号を探す
     let current =
@@ -208,6 +277,14 @@ function updateTitleArea(list, value, unit, titleEl, fillEl, nextEl) {
 
     titleEl.textContent =
         current.name;
+
+
+    if (commentEl && current.comments) {
+
+        commentEl.textContent =
+            pickComment(current.comments, commentKey);
+
+    }
 
 
     if (next) {
@@ -244,16 +321,12 @@ function updateTitleArea(list, value, unit, titleEl, fillEl, nextEl) {
 // 連続ログイン称号
 // ====================
 
-const streakTitles = [
+// 称号とコメントは messages.js にあります
+const streakTitles =
+    STREAK_TITLES;
 
-    { min: 0,  name: "🌱 希望の芽" },
-    { min: 3,  name: "🌿 日々精進" },
-    { min: 7,  name: "🌸 継続は力なり" },
-    { min: 14, name: "🍀 日進月歩" },
-    { min: 30, name: "🌻 努力の結晶" },
-    { min: 60, name: "✨ 不撓不屈" }
-
-];
+const streakTitleCommentEl =
+    document.getElementById("streakTitleComment");
 
 
 function updateStreakTitleDisplay() {
@@ -267,11 +340,15 @@ function updateStreakTitleDisplay() {
         "日",
         document.getElementById("streakTitle"),
         document.getElementById("streakProgressFill"),
-        document.getElementById("streakNext")
+        document.getElementById("streakNext"),
+        streakTitleCommentEl,
+        "streakTitle"
     );
 
 }
 
+
+makeCommentTappable(streakTitleCommentEl, "streakTitle", updateStreakTitleDisplay);
 
 updateStreakTitleDisplay();
 
@@ -280,15 +357,12 @@ updateStreakTitleDisplay();
 // ポイント称号
 // ====================
 
-const titles = [
+// 称号とコメントは messages.js にあります
+const titles =
+    POINT_TITLES;
 
-    { min: 0,   name: "🌱 記録のはじまり" },
-    { min: 50,  name: "📝 記録の習慣" },
-    { min: 150, name: "🌿 記録の積み重ね" },
-    { min: 300, name: "🌸 記録の匠" },
-    { min: 500, name: "✨ 思い出の宝箱" }
-
-];
+const pointTitleCommentEl =
+    document.getElementById("pointTitleComment");
 
 
 const currentTitleEl =
@@ -332,11 +406,15 @@ function updateTitleDisplay() {
         "pt",
         currentTitleEl,
         titleProgressFill,
-        titleNextEl
+        titleNextEl,
+        pointTitleCommentEl,
+        "pointTitle"
     );
 
 }
 
+
+makeCommentTappable(pointTitleCommentEl, "pointTitle", updateTitleDisplay);
 
 updateTitleDisplay();
 

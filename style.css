@@ -405,6 +405,31 @@ button:hover {
     margin: 5px 0;
 }
 
+/* 称号のコメント（タップで切り替え） */
+.title-comment {
+    margin: 4px auto 8px;
+    max-width: 30em;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+}
+
+.streak-message {
+    cursor: pointer;
+    user-select: none;
+}
+
+.comment-pop {
+    animation: commentPop 0.35s ease;
+}
+
+@keyframes commentPop {
+    0%   { opacity: 0; transform: translateY(4px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
 .total-points {
     font-size: 32px;
     font-weight: bold;
